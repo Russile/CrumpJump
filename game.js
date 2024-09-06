@@ -158,8 +158,25 @@ function restartGame(hardMode) {
     bird.velocity = bird.jump * INITIAL_JUMP_MULTIPLIER;
 }
 
+// Add these variables near the top of your file with other game variables
+let lastJumpTime = 0;
+const BOOST_THRESHOLD = 265; // Time in milliseconds for consecutive jumps to trigger boost
+const BOOST_MULTIPLIER = 1.35; // How much stronger the boost jump is
+let boosting = false;
+
 function jump() {
-    bird.velocity = bird.jump;
+    const currentTime = Date.now();
+    if (currentTime - lastJumpTime < BOOST_THRESHOLD) {
+        // Boost jump
+        bird.velocity = bird.jump * BOOST_MULTIPLIER;
+        boosting = true;
+    } else {
+        // Normal jump
+        bird.velocity = bird.jump;
+        boosting = false;
+    }
+    lastJumpTime = currentTime;
+
     flapDownFrames = FLAP_DOWN_DURATION;
     flapTransitionFrames = FLAP_TRANSITION_DURATION;
 }
@@ -195,6 +212,8 @@ document.addEventListener('keydown', function(event) {
         localStorage.setItem('normalModeHighScore', '0');
         localStorage.setItem('hardModeHighScore', '0');
         console.log('Normal and Hard Mode High Scores reset to 0');
+    } else if (event.key === 'd' || event.key === 'D') {
+        toggleDebugMode();
     }
 });
 
@@ -352,6 +371,15 @@ function hideHardModeUnlockedPopup() {
     showingUnlockPopup = false;
 }
 
+// Add this near the top of your file with other game variables
+let debugMode = false;
+
+// Add this function to toggle debug mode
+function toggleDebugMode() {
+    debugMode = !debugMode;
+    console.log(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
+}
+
 function update() {
     if (!gameStarted) return;
     if (gameOver) {
@@ -364,6 +392,14 @@ function update() {
     // Apply gravity and update bird position
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
+
+    // If boosting, reduce the effect of gravity
+    if (boosting) {
+        bird.velocity *= 0.95; // Reduce velocity decay while boosting
+        if (bird.velocity > 0) {
+            boosting = false; // Stop boosting when bird starts falling
+        }
+    }
 
     // Bird animation
     if (flapDownFrames > 0) {
@@ -508,7 +544,7 @@ function draw() {
         }
 
         const logoX = (gameWidth - logoWidth) / 2;
-        const logoY = gameHeight * 0.20; // Adjust this value to move the logo up or down
+        const logoY = gameHeight * 0.25; // Adjust this value to move the logo up or down
 
         ctx.drawImage(titleLogoImg, logoX, logoY, logoWidth, logoHeight);
 
@@ -681,15 +717,25 @@ function draw() {
         });
     }
 
-    // Draw bird collision circle (for debugging)
-    if (window.debugMode) {
+    // Debug mode drawings
+    if (debugMode) {
+        // Draw bird hitbox
         const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase
         const birdCenterX = bird.x + bird.width / 2;
         const birdCenterY = bird.y + bird.height / 2;
         ctx.beginPath();
         ctx.arc(birdCenterX, birdCenterY, birdRadius, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = boosting ? 'green' : 'red';
         ctx.stroke();
+
+        // Draw pipe hitboxes
+        ctx.strokeStyle = 'blue';
+        for (let pipe of pipes) {
+            // Top pipe hitbox
+            ctx.strokeRect(pipe.x, 0, pipe.width, pipe.topHeight);
+            // Bottom pipe hitbox
+            ctx.strokeRect(pipe.x, pipe.bottomY, pipe.width, gameHeight - pipe.bottomY);
+        }
     }
 }
 
