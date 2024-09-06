@@ -26,8 +26,8 @@ let frameCount = 0;
 let bird = {
     x: gameWidth * 0.2,
     y: gameHeight * 0.4,
-    width: 37.5,  // Increased by 25% from 30
-    height: 37.5, // Increased by 25% from 30
+    width: 43.125,  // Increased by 15% from 37.5
+    height: 43.125, // Increased by 15% from 37.5
     velocity: 0,
     gravity: 0.5,
     jump: -7.4,
@@ -116,10 +116,10 @@ function handlePointerEvent(event) {
     tapX = (tapX - rect.left) * scaleX;
     tapY = (tapY - rect.top) * scaleY;
 
-    const buttonWidth = 120;
+    const buttonWidth = 140; // Match the new button width
     const buttonHeight = buttonWidth * (200 / 480);
-    const buttonSpacing = 10;
-    const bottomMargin = 20;
+    const buttonSpacing = 15;
+    const bottomMargin = 30;
     const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
     const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
     const buttonX = (gameWidth - buttonWidth) / 2;
@@ -231,8 +231,8 @@ function resetGame(startInHardMode = false) {
     bird = {
         x: gameWidth * 0.2,
         y: gameHeight * 0.4, // Start bird higher
-        width: 37.5,
-        height: 37.5,
+        width: 43.125, // Increased by 15% from 37.5
+        height: 43.125, // Increased by 15% from 37.5
         velocity: 0,
         gravity: 0.5,
         jump: -7.4,
@@ -285,7 +285,7 @@ function createPipe() {
 
 // Modify the checkCollision function to use circular hitbox
 function checkCollision(birdX, birdY, pipeX, pipeTop, pipeBottom) {
-    const birdRadius = bird.width * 0.2; // Adjust this factor to make the collision circle smaller
+    const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase (0.2 * 1.15)
     const birdCenterX = birdX + bird.width / 2;
     const birdCenterY = birdY + bird.height / 2;
     const pipeWidth = 50; // Adjust this to match your pipe width
@@ -508,15 +508,15 @@ function draw() {
         }
 
         const logoX = (gameWidth - logoWidth) / 2;
-        const logoY = gameHeight * 0.15; // Adjust this value to position the logo vertically
+        const logoY = gameHeight * 0.20; // Adjust this value to move the logo up or down
 
         ctx.drawImage(titleLogoImg, logoX, logoY, logoWidth, logoHeight);
 
         // Calculate button dimensions and positions
-        const buttonWidth = 120;
-        const buttonHeight = buttonWidth * (200 / 480);
-        const buttonSpacing = 10;
-        const bottomMargin = 20;
+        const buttonWidth = 140; // Increased from 120
+        const buttonHeight = buttonWidth * (200 / 480); // Maintain aspect ratio
+        const buttonSpacing = 15; // Slightly increased from 10
+        const bottomMargin = 30; // Increased from 20
         const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
         const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
         const buttonX = (gameWidth - buttonWidth) / 2;
@@ -639,10 +639,10 @@ function draw() {
             ctx.fillRect(0, gameHeight - 5, (Date.now() - gameOverTime) / GAME_OVER_DELAY * gameWidth, 5);
         } else {
             // Calculate button dimensions and positions
-            const buttonWidth = 120;
-            const buttonHeight = buttonWidth * (200 / 480);
-            const buttonSpacing = 10;
-            const bottomMargin = 20;
+            const buttonWidth = 140; // Increased from 120
+            const buttonHeight = buttonWidth * (200 / 480); // Maintain aspect ratio
+            const buttonSpacing = 15; // Slightly increased from 10
+            const bottomMargin = 30; // Increased from 20
             const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
             const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
             const buttonX = (gameWidth - buttonWidth) / 2;
@@ -683,7 +683,7 @@ function draw() {
 
     // Draw bird collision circle (for debugging)
     if (window.debugMode) {
-        const birdRadius = bird.width * 0.2;
+        const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase
         const birdCenterX = bird.x + bird.width / 2;
         const birdCenterY = bird.y + bird.height / 2;
         ctx.beginPath();
