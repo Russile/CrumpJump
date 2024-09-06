@@ -141,6 +141,12 @@ function handlePointerEvent(event) {
     } else {
         jump();
     }
+
+    if (!gameStarted || gameOver) {
+        showCursor(); // Ensure cursor is visible on start and game over screens
+    } else {
+        hideCursor(); // Hide cursor during gameplay
+    }
 }
 
 // Add these new functions to handle game actions
@@ -149,6 +155,8 @@ function startGame(hardMode) {
     hardModeActive = hardMode;
     resetGame(hardMode);
     bird.velocity = bird.jump * INITIAL_JUMP_MULTIPLIER;
+    canvas.classList.add('playing'); // Add this line
+    hideCursor(); // Hide cursor when game starts
 }
 
 function restartGame(hardMode) {
@@ -282,6 +290,13 @@ function resetGame(startInHardMode = false) {
     }
 
     showingUnlockPopup = false; // Reset the popup visibility
+    canvas.classList.remove('playing'); // Add this line
+
+    if (!gameStarted || gameOver) {
+        showCursor(); // Show cursor on start screen and game over screen
+    } else {
+        hideCursor(); // Hide cursor during gameplay
+    }
 }
 
 // Modify createPipe function
@@ -384,6 +399,7 @@ function update() {
     if (!gameStarted) return;
     if (gameOver) {
         hideHardModeUnlockedPopup();
+        showCursor(); // Show cursor on game over
         return;
     }
 
@@ -664,6 +680,20 @@ function draw() {
         ctx.globalAlpha = 1.0;
     } else {
         ctx.drawImage(normalModeImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+
+        // Draw progress indicator for hard mode unlock
+        if (!hardModeUnlocked) {
+            const progress = Math.min(score / HARD_MODE_UNLOCK_SCORE, 1);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; // Transparent white
+            
+            // Calculate the actual dimensions of the "Normal Mode" text within the image
+            const textWidth = modeImgWidth * 0.9; // Adjust this value as needed
+            const textHeight = modeImgHeight * 0.7; // Adjust this value as needed
+            const textX = modeImgX + (modeImgWidth - textWidth) / 2;
+            const textY = modeImgY + (modeImgHeight - textHeight) / 2;
+
+            ctx.fillRect(textX, textY, textWidth * progress, textHeight);
+        }
     }
 
     if (gameOver) {
@@ -765,6 +795,30 @@ function drawTextWithOutline(text, x, y, fillStyle, strokeStyle, lineWidth, font
     ctx.strokeText(text, x, y);
     ctx.fillText(text, x, y);
 }
+
+// Add these new functions near the top of your file
+function hideCursor() {
+    canvas.style.cursor = 'none';
+}
+
+function showCursor() {
+    canvas.style.cursor = 'auto';
+}
+
+// Add these event listeners at the end of your file
+canvas.addEventListener('mousemove', function() {
+    if (gameStarted && !gameOver) {
+        hideCursor();
+    }
+});
+
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && gameStarted && !gameOver) {
+        hideCursor();
+    } else {
+        showCursor();
+    }
+});
 
 // Update the drawButton function
 function drawButton(x, y, width, height, text, fillColor, textColor, fontSize = '24px') {
