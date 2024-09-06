@@ -219,7 +219,7 @@ document.addEventListener('keydown', function(event) {
 
 // Add these variables at the top of your file with other game variables
 let initialJump = true;
-const INITIAL_JUMP_MULTIPLIER = 1.25; // Adjust this value as needed
+const INITIAL_JUMP_MULTIPLIER = 1.15; // Adjust this value as needed
 let gameOverTime = 0;
 const GAME_OVER_DELAY = 1000; // 1 second delay, adjust as needed
 
@@ -393,6 +393,17 @@ function update() {
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
 
+    // Calculate bird's hitbox
+    const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase
+    const birdCenterX = bird.x + bird.width / 2;
+    const birdCenterY = bird.y + bird.height / 2;
+
+    // Prevent bird from going above the screen using the circular hitbox
+    if (birdCenterY - birdRadius < 0) {
+        bird.y = birdRadius - bird.height / 2;
+        bird.velocity = 0; // Stop upward movement
+    }
+
     // If boosting, reduce the effect of gravity
     if (boosting) {
         bird.velocity *= 0.95; // Reduce velocity decay while boosting
@@ -444,7 +455,7 @@ function update() {
     } else {
         // Normal mode collision checks
         // Check if bird hits the ground or flies too high
-        if (bird.y + bird.height > gameHeight || bird.y < 0) {
+        if (bird.y + bird.height > gameHeight) {
             gameOver = true;
             gameOverTime = Date.now(); // Record the time when game over occurs
             updateHighScore();
