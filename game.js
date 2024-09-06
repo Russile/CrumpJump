@@ -36,7 +36,8 @@ let bird = {
 
 let pipes = [];
 let score = 0;
-let highScore = parseInt(localStorage.getItem('highScore')) || 0;
+let normalModeHighScore = parseInt(localStorage.getItem('normalModeHighScore')) || 0;
+let hardModeHighScore = parseInt(localStorage.getItem('hardModeHighScore')) || 0;
 let gameOver = false;
 let gameStarted = false;
 let testMode = false;
@@ -115,25 +116,26 @@ function handlePointerEvent(event) {
     tapX = (tapX - rect.left) * scaleX;
     tapY = (tapY - rect.top) * scaleY;
 
-    const buttonWidth = 150;
-    const buttonHeight = 50;
-    const buttonSpacing = 20;
-    const startButtonY = gameHeight * 0.6;
-    const hardModeButtonY = startButtonY + buttonHeight + buttonSpacing;
+    const buttonWidth = 120;
+    const buttonHeight = buttonWidth * (200 / 480);
+    const buttonSpacing = 10;
+    const bottomMargin = 20;
+    const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
+    const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
     const buttonX = (gameWidth - buttonWidth) / 2;
 
     if (!gameStarted) {
-        if (isTapWithinButton(tapX, tapY, buttonX, startButtonY, buttonWidth, buttonHeight)) {
-            startGame(false);
+        if (isTapWithinButton(tapX, tapY, buttonX, normalModeButtonY, buttonWidth, buttonHeight)) {
+            startGame(false); // Normal Mode
         } else if (hardModeUnlocked && isTapWithinButton(tapX, tapY, buttonX, hardModeButtonY, buttonWidth, buttonHeight)) {
-            startGame(true);
+            startGame(true); // Hard Mode
         }
     } else if (gameOver) {
         if (Date.now() - gameOverTime >= GAME_OVER_DELAY) {
-            if (isTapWithinButton(tapX, tapY, buttonX, startButtonY, buttonWidth, buttonHeight)) {
-                restartGame(false);
+            if (isTapWithinButton(tapX, tapY, buttonX, normalModeButtonY, buttonWidth, buttonHeight)) {
+                restartGame(false); // Normal Mode
             } else if (hardModeUnlocked && isTapWithinButton(tapX, tapY, buttonX, hardModeButtonY, buttonWidth, buttonHeight)) {
-                restartGame(true);
+                restartGame(true); // Hard Mode
             }
         }
     } else {
@@ -170,17 +172,29 @@ canvas.addEventListener('mousedown', handlePointerEvent);
 document.addEventListener('keydown', function(event) {
     if (event.code === 'Space') {
         if (!gameStarted) {
-            startGame(false);
+            startGame(false); // Start in Normal Mode
         } else if (gameOver) {
             if (Date.now() - gameOverTime >= GAME_OVER_DELAY) {
-                restartGame(false);
+                restartGame(false); // Restart in Normal Mode
             }
         } else {
             jump();
         }
     } else if (event.key === 'h' || event.key === 'H') {
-        testHardMode = !testHardMode;
-        hardModeUnlocked = true;
+        hardModeUnlocked = !hardModeUnlocked;
+        localStorage.setItem('hardModeUnlocked', hardModeUnlocked.toString());
+        if (hardModeUnlocked) {
+            showHardModeUnlockedPopup();
+        } else {
+            showingUnlockPopup = false;
+        }
+        console.log(`Hard mode ${hardModeUnlocked ? 'unlocked' : 'locked'}`);
+    } else if (event.key === 's' || event.key === 'S') {
+        normalModeHighScore = 0;
+        hardModeHighScore = 0;
+        localStorage.setItem('normalModeHighScore', '0');
+        localStorage.setItem('hardModeHighScore', '0');
+        console.log('Normal and Hard Mode High Scores reset to 0');
     }
 });
 
@@ -247,6 +261,8 @@ function resetGame(startInHardMode = false) {
         backgroundSpeed = INITIAL_BACKGROUND_SPEED;
         pipeSpeed = INITIAL_PIPE_SPEED;
     }
+
+    showingUnlockPopup = false; // Reset the popup visibility
 }
 
 // Modify createPipe function
@@ -290,19 +306,16 @@ function checkCollision(birdX, birdY, pipeX, pipeTop, pipeBottom) {
 }
 
 function updateHighScore() {
-    console.log(`Updating high score. Current score: ${score}, Current high score: ${highScore}`);
-    
-    // Check for hard mode unlock regardless of high score
-    if (score >= HARD_MODE_UNLOCK_SCORE && !hardModeUnlocked) {
-        hardModeUnlocked = true;
-        localStorage.setItem('hardModeUnlocked', 'true');
-        showHardModeUnlockedPopup();
-    }
-
-    // Update high score if necessary
-    if (score > highScore) {
-        highScore = score;
-        localStorage.setItem('highScore', highScore);
+    if (hardModeActive) {
+        if (score > hardModeHighScore) {
+            hardModeHighScore = score;
+            localStorage.setItem('hardModeHighScore', hardModeHighScore.toString());
+        }
+    } else {
+        if (score > normalModeHighScore) {
+            normalModeHighScore = score;
+            localStorage.setItem('normalModeHighScore', normalModeHighScore.toString());
+        }
     }
 }
 
@@ -318,23 +331,33 @@ const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
 
 // Add these variables at the top of your file
 let showingUnlockPopup = false;
-let popupOpacity = 1;
-const POPUP_FADE_DURATION = 1500; // 1.5 seconds
-let popupFadeStartTime;
 
 // Load the hard mode unlock image
 const hardModeUnlockedImg = new Image();
 hardModeUnlockedImg.src = 'hardmodeunlocked.png';
 
+// Load the hard mode active image
+const hardModeActiveImg = new Image();
+hardModeActiveImg.src = 'hardmode.png';
+
+// Add these lines near the top of your file where you load other images
+const normalModeImg = new Image();
+normalModeImg.src = 'normalmode.png';
+
 function showHardModeUnlockedPopup() {
     showingUnlockPopup = true;
-    popupOpacity = 1;
-    popupFadeStartTime = Date.now();
+}
+
+function hideHardModeUnlockedPopup() {
+    showingUnlockPopup = false;
 }
 
 function update() {
     if (!gameStarted) return;
-    if (gameOver) return;
+    if (gameOver) {
+        hideHardModeUnlockedPopup();
+        return;
+    }
 
     frameCount++;
 
@@ -433,7 +456,7 @@ function update() {
         lastPipeSpawnX -= pipeSpeed;
     }
 
-    // Check for hard mode unlock in the main update loop
+    // Check for hard mode unlock
     if (score >= HARD_MODE_UNLOCK_SCORE && !hardModeUnlocked) {
         hardModeUnlocked = true;
         localStorage.setItem('hardModeUnlocked', 'true');
@@ -489,19 +512,21 @@ function draw() {
 
         ctx.drawImage(titleLogoImg, logoX, logoY, logoWidth, logoHeight);
 
-        // Draw "Start" button
-        const buttonWidth = 150;
-        const buttonHeight = 50;
-        const buttonSpacing = 20;
-        const startButtonY = gameHeight * 0.6;
+        // Calculate button dimensions and positions
+        const buttonWidth = 120;
+        const buttonHeight = buttonWidth * (200 / 480);
+        const buttonSpacing = 10;
+        const bottomMargin = 20;
+        const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
+        const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
         const buttonX = (gameWidth - buttonWidth) / 2;
 
-        drawButton(buttonX, startButtonY, buttonWidth, buttonHeight, 'Start', 'rgba(0, 255, 0, 0.6)', 'white');
+        // Draw "Normal Mode" button
+        ctx.drawImage(normalModeImg, buttonX, normalModeButtonY, buttonWidth, buttonHeight);
 
         if (hardModeUnlocked) {
             // Draw "Hard Mode" button
-            const hardModeButtonY = startButtonY + buttonHeight + buttonSpacing;
-            drawButton(buttonX, hardModeButtonY, buttonWidth, buttonHeight, 'Hard Mode', 'rgba(255, 0, 0, 0.6)', 'white');
+            ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
         }
 
         return;  // Don't draw anything else
@@ -547,7 +572,8 @@ function draw() {
     drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
 
     // Draw high score - align left
-    drawTextWithOutline(`High Score: ${highScore}`, 10, 48, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
+    const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
+    drawTextWithOutline(`High Score: ${currentHighScore}`, 10, 48, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
 
     // Draw speed meter
     const SPEED_METER_WIDTH = 100;
@@ -574,6 +600,25 @@ function draw() {
     // Draw speed label
     drawTextWithOutline('Speed', meterX, gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT - 5, 'white', 'black', 2, '20px', 'normal', 'left', 'bottom');
 
+    // Calculate dimensions for the mode images
+    const modeImgWidth = gameWidth * 0.25;
+    const modeImgHeight = modeImgWidth * (200 / 480);
+    const modeImgX = gameWidth - modeImgWidth - 5;
+    const modeImgY = gameHeight - modeImgHeight - 5;
+
+    // Draw mode indicator
+    if (showingUnlockPopup && !gameOver) {
+        ctx.drawImage(hardModeUnlockedImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+    } else if (hardModeActive) {
+        if (gameOver) {
+            ctx.globalAlpha = 0.5;
+        }
+        ctx.drawImage(hardModeActiveImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+        ctx.globalAlpha = 1.0;
+    } else {
+        ctx.drawImage(normalModeImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+    }
+
     if (gameOver) {
         // Semi-transparent background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -587,25 +632,27 @@ function draw() {
 
         // Score and High Score
         drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.45, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
-        drawTextWithOutline(`High Score: ${highScore}`, gameWidth / 2, gameHeight * 0.55, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+        drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.55, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
 
         if (Date.now() - gameOverTime < GAME_OVER_DELAY) {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(0, gameHeight - 5, (Date.now() - gameOverTime) / GAME_OVER_DELAY * gameWidth, 5);
         } else {
-            // Draw "Restart" button
-            const buttonWidth = 150;
-            const buttonHeight = 50;
-            const buttonSpacing = 20;
-            const restartButtonY = gameHeight * 0.6;
+            // Calculate button dimensions and positions
+            const buttonWidth = 120;
+            const buttonHeight = buttonWidth * (200 / 480);
+            const buttonSpacing = 10;
+            const bottomMargin = 20;
+            const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
+            const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
             const buttonX = (gameWidth - buttonWidth) / 2;
 
-            drawButton(buttonX, restartButtonY, buttonWidth, buttonHeight, 'Restart', 'rgba(0, 255, 0, 0.6)', 'white');
+            // Draw "Normal Mode" button
+            ctx.drawImage(normalModeImg, buttonX, normalModeButtonY, buttonWidth, buttonHeight);
 
             if (hardModeUnlocked) {
                 // Draw "Hard Mode" button
-                const hardModeButtonY = restartButtonY + buttonHeight + buttonSpacing;
-                drawButton(buttonX, hardModeButtonY, buttonWidth, buttonHeight, 'Hard Mode', 'rgba(255, 0, 0, 0.6)', 'white');
+                ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
             }
         }
 
@@ -632,37 +679,6 @@ function draw() {
             drawTextWithOutline(text, 10, yPos, 'white', 'black', 2, '20px');
             yPos += 20;
         });
-    }
-
-    // Move Hard Mode indicator to bottom right
-    if (hardModeActive) {
-        drawTextWithOutline('HARD MODE', gameWidth - 10, gameHeight - 10, '#FF4136', 'black', 2, '24px', 'bold', 'right', 'bottom');
-    }
-
-    // Display Test Hard Mode indicator if active (also moved to bottom right)
-    if (testHardMode) {
-        drawTextWithOutline('Test Hard Mode', gameWidth - 10, gameHeight - 30, '#FF4136', 'black', 2, '20px', 'bold', 'right', 'bottom');
-    }
-
-    // Always check if we should show the popup
-    if (showingUnlockPopup) {
-        const currentTime = Date.now();
-        const elapsedTime = currentTime - popupFadeStartTime;
-        
-        if (elapsedTime < POPUP_FADE_DURATION) {
-            popupOpacity = 1 - (elapsedTime / POPUP_FADE_DURATION);
-            
-            ctx.globalAlpha = popupOpacity;
-            const popupWidth = gameWidth * 0.8;
-            const popupHeight = popupWidth * (hardModeUnlockedImg.height / hardModeUnlockedImg.width);
-            const popupX = (gameWidth - popupWidth) / 2;
-            const popupY = (gameHeight - popupHeight) / 2;
-            
-            ctx.drawImage(hardModeUnlockedImg, popupX, popupY, popupWidth, popupHeight);
-            ctx.globalAlpha = 1;
-        } else {
-            showingUnlockPopup = false;
-        }
     }
 
     // Draw bird collision circle (for debugging)
@@ -722,7 +738,9 @@ Promise.all([
     crumpImgDown.decode(),
     backgroundImg.decode(),
     titleLogoImg.decode(),
-    hardModeUnlockedImg.decode()
+    hardModeUnlockedImg.decode(),
+    hardModeActiveImg.decode(),
+    normalModeImg.decode()
 ]).then(() => {
     // Start the game loop
     lastUpdateTime = performance.now();
@@ -761,9 +779,11 @@ resetGame();
 // Developer tools
 window.devTools = {
     resetHighScore: function() {
-        highScore = 0;
-        localStorage.setItem('highScore', '0');
-        console.log('High score reset to 0');
+        normalModeHighScore = 0;
+        hardModeHighScore = 0;
+        localStorage.setItem('normalModeHighScore', '0');
+        localStorage.setItem('hardModeHighScore', '0');
+        console.log('Normal and Hard Mode High Scores reset to 0');
     },
     toggleHardMode: function() {
         hardModeUnlocked = !hardModeUnlocked;
