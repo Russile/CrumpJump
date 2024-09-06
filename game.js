@@ -116,6 +116,20 @@ function handlePointerEvent(event) {
     tapX = (tapX - rect.left) * scaleX;
     tapY = (tapY - rect.top) * scaleY;
 
+    // Check for logo clicks on the start screen
+    if (!gameStarted) {
+        const logoWidth = gameWidth * 0.8;
+        const logoHeight = logoWidth / (640 / 428);
+        const logoX = (gameWidth - logoWidth) / 2;
+        const logoY = gameHeight * 0.25;
+
+        if (tapX >= logoX && tapX <= logoX + logoWidth &&
+            tapY >= logoY && tapY <= logoY + logoHeight) {
+            handleLogoClick();
+            return;
+        }
+    }
+
     const buttonWidth = 140; // Match the new button width
     const buttonHeight = buttonWidth * (200 / 480);
     const buttonSpacing = 15;
@@ -393,6 +407,68 @@ let debugMode = false;
 function toggleDebugMode() {
     debugMode = !debugMode;
     console.log(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
+}
+
+// Add these variables near the top of your file
+let logoClickCount = 0;
+let lastLogoClickTime = 0;
+const LOGO_CLICK_THRESHOLD = 1000; // 1 second
+const LOGO_CLICKS_REQUIRED = 5;
+
+// Add this new function
+function handleLogoClick() {
+    const currentTime = Date.now();
+    if (currentTime - lastLogoClickTime < LOGO_CLICK_THRESHOLD) {
+        logoClickCount++;
+        if (logoClickCount === LOGO_CLICKS_REQUIRED) {
+            resetAllVariables();
+            logoClickCount = 0;
+        }
+    } else {
+        logoClickCount = 1;
+    }
+    lastLogoClickTime = currentTime;
+}
+
+// Add this new function to reset all variables
+function resetAllVariables() {
+    normalModeHighScore = 0;
+    hardModeHighScore = 0;
+    hardModeUnlocked = false;
+    localStorage.setItem('normalModeHighScore', '0');
+    localStorage.setItem('hardModeHighScore', '0');
+    localStorage.setItem('hardModeUnlocked', 'false');
+    console.log('All variables reset');
+    // You can add a visual feedback here, like a flash or a message
+    showResetMessage();
+}
+
+// Add this function to show a reset message
+function showResetMessage() {
+    const message = 'All data reset!';
+    const originalFillStyle = ctx.fillStyle;
+    const originalFont = ctx.font;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = '24px ' + GAME_FONT;
+    const messageWidth = ctx.measureText(message).width;
+
+    const messageX = (gameWidth - messageWidth) / 2;
+    const messageY = gameHeight * 0.7;
+
+    ctx.fillRect(messageX - 10, messageY - 30, messageWidth + 20, 40);
+    ctx.fillStyle = 'black';
+    ctx.fillText(message, messageX, messageY);
+
+    // Restore original context settings
+    ctx.fillStyle = originalFillStyle;
+    ctx.font = originalFont;
+
+    // Remove the message after 2 seconds
+    setTimeout(() => {
+        // Redraw the start screen
+        draw();
+    }, 2000);
 }
 
 function update() {
