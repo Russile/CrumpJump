@@ -40,7 +40,7 @@ let normalModeHighScore = parseInt(localStorage.getItem('normalModeHighScore')) 
 let hardModeHighScore = parseInt(localStorage.getItem('hardModeHighScore')) || 0;
 let gameOver = false;
 let gameStarted = false;
-let testMode = false;
+let debugMode = false;
 let pipesPassed = 0;
 let backgroundSpeed = 1;
 let pipeSpeed = 2;
@@ -50,6 +50,22 @@ const INITIAL_PIPE_SPEED = 2; // Initial pipe speed
 const INITIAL_BACKGROUND_SPEED = 1; // Initial background speed
 const PIPE_SPACING = 200; // Desired horizontal spacing between pipes in pixels
 let lastPipeSpawnX = gameWidth;
+
+// Boost variables
+let boosting = false;
+let lastJumpTime = 0;
+let boostLevel = 0;
+const MAX_BOOST_LEVEL = 2; // 0, 1, 2 (three levels total)
+const BASE_BOOST_MULTIPLIER = 1.35;
+const BOOST_INCREMENT = 0.2;
+const BOOST_THRESHOLD = 300; // Adjust this value as needed (in milliseconds)
+
+// Flap animation variables
+let lastFlapDirection = 0; // 0 for neutral, -1 for up, 1 for down
+let flapDownFrames = 0;
+let flapTransitionFrames = 0;
+const FLAP_DOWN_DURATION = 9; 
+const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
 
 // Load pipe images
 const pipeImgs = [
@@ -123,8 +139,7 @@ function handlePointerEvent(event) {
         const logoX = (gameWidth - logoWidth) / 2;
         const logoY = gameHeight * 0.25;
 
-        if (tapX >= logoX && tapX <= logoX + logoWidth &&
-            tapY >= logoY && tapY <= logoY + logoHeight) {
+        if (isTapWithinButton(tapX, tapY, logoX, logoY, logoWidth, logoHeight)) {
             handleLogoClick();
             return;
         }
@@ -156,6 +171,19 @@ function handlePointerEvent(event) {
         jump();
     }
 
+    if (debugMode) {
+        // Check for "Reset All" button click
+        const resetButtonWidth = 100;
+        const resetButtonHeight = 40;
+        const resetButtonX = gameWidth - resetButtonWidth - 10;
+        const resetButtonY = 10;
+
+        if (isTapWithinButton(tapX, tapY, resetButtonX, resetButtonY, resetButtonWidth, resetButtonHeight)) {
+            resetAllVariables();
+            return;
+        }
+    }
+
     if (!gameStarted || gameOver) {
         showCursor(); // Ensure cursor is visible on start and game over screens
     } else {
@@ -180,22 +208,19 @@ function restartGame(hardMode) {
     bird.velocity = bird.jump * INITIAL_JUMP_MULTIPLIER;
 }
 
-// Add these variables near the top of your file with other game variables
-let lastJumpTime = 0;
-const BOOST_THRESHOLD = 265; // Time in milliseconds for consecutive jumps to trigger boost
-const BOOST_MULTIPLIER = 1.35; // How much stronger the boost jump is
-let boosting = false;
-
 function jump() {
     const currentTime = Date.now();
     if (currentTime - lastJumpTime < BOOST_THRESHOLD) {
         // Boost jump
-        bird.velocity = bird.jump * BOOST_MULTIPLIER;
+        boostLevel = Math.min(boostLevel + 1, MAX_BOOST_LEVEL);
+        const currentBoostMultiplier = BASE_BOOST_MULTIPLIER + (BOOST_INCREMENT * boostLevel);
+        bird.velocity = bird.jump * currentBoostMultiplier;
         boosting = true;
     } else {
         // Normal jump
         bird.velocity = bird.jump;
         boosting = false;
+        boostLevel = 0; // Reset boost level for normal jumps
     }
     lastJumpTime = currentTime;
 
@@ -245,7 +270,7 @@ const INITIAL_JUMP_MULTIPLIER = 1.15; // Adjust this value as needed
 let gameOverTime = 0;
 const GAME_OVER_DELAY = 1000; // 1 second delay, adjust as needed
 
-// Add these variables at the top of your file
+// Add these variables at the top of your file with other game variables
 let hardModeUnlocked = false;
 let hardModeActive = false;
 const HARD_MODE_UNLOCK_SCORE = 25;
@@ -370,12 +395,7 @@ function updateHighScore() {
 const FIXED_DELTA_TIME = 1 / 60; // 60 FPS logic update
 let lastUpdateTime = 0;
 
-// Add these variables to your game state
-let lastFlapDirection = 0; // 0 for neutral, -1 for up, 1 for down
-let flapDownFrames = 0;
-let flapTransitionFrames = 0;
-const FLAP_DOWN_DURATION = 9; 
-const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
+
 
 // Add these variables at the top of your file
 let showingUnlockPopup = false;
@@ -400,16 +420,7 @@ function hideHardModeUnlockedPopup() {
     showingUnlockPopup = false;
 }
 
-// Add this near the top of your file with other game variables
-let debugMode = false;
-
-// Add this function to toggle debug mode
-function toggleDebugMode() {
-    debugMode = !debugMode;
-    console.log(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
-}
-
-// Add these variables near the top of your file
+// Add this near the top of your file
 let logoClickCount = 0;
 let lastLogoClickTime = 0;
 const LOGO_CLICK_THRESHOLD = 1000; // 1 second
@@ -421,7 +432,7 @@ function handleLogoClick() {
     if (currentTime - lastLogoClickTime < LOGO_CLICK_THRESHOLD) {
         logoClickCount++;
         if (logoClickCount === LOGO_CLICKS_REQUIRED) {
-            resetAllVariables();
+            toggleDebugMode();
             logoClickCount = 0;
         }
     } else {
@@ -471,11 +482,75 @@ function showResetMessage() {
     }, 2000);
 }
 
+// Modify the draw function to include the developer mode features
+function draw() {
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+
+    // Draw scrolling background with 1px overlap
+    ctx.drawImage(backgroundImg, Math.floor(backgroundX), 0);
+    ctx.drawImage(backgroundImg, Math.floor(backgroundX) + backgroundImg.width - 1, 0);
+
+    // Draw pipes
+    pipes.forEach(pipe => {
+        // ... existing pipe drawing code ...
+    });
+
+    // Draw bird
+    ctx.save();
+    ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
+    ctx.rotate(bird.rotation);
+    ctx.drawImage(
+        currentCrumpImg,
+        0, 0, 200, 200,  // Source rectangle (full image)
+        -bird.width / 2, -bird.height / 2, bird.width, bird.height  // Destination rectangle (scaled)
+    );
+    ctx.restore();
+
+    // Draw score
+    drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
+
+    // Draw high score
+    const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
+    drawTextWithOutline(`High Score: ${currentHighScore}`, 10, 48, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
+
+    // Draw debug information on top of everything else
+    drawDebugInfo();
+}
+
+// Add this function to draw buttons
+function drawButton(x, y, width, height, text, fillColor, textColor, fontSize = '24px') {
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+    ctx.fillStyle = textColor;
+    ctx.font = `${fontSize} ${GAME_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + width / 2, y + height / 2);
+}
+
+// Add this function to toggle debug mode
+function toggleDebugMode() {
+    debugMode = !debugMode;
+    console.log(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
+    
+    if (debugMode) {
+        canvas.style.cursor = 'default';
+    } else {
+        canvas.style.cursor = 'none';
+    }
+    
+    // Force a redraw to show/hide debug mode features
+    draw();
+}
+
 function update() {
     if (!gameStarted) return;
-    if (gameOver) {
+    if (gameOver && !debugMode) {
         hideHardModeUnlockedPopup();
-        showCursor(); // Show cursor on game over
+        showCursor();
         return;
     }
 
@@ -501,6 +576,7 @@ function update() {
         bird.velocity *= 0.95; // Reduce velocity decay while boosting
         if (bird.velocity > 0) {
             boosting = false; // Stop boosting when bird starts falling
+            boostLevel = 0; // Reset boost level when boost ends
         }
     }
 
@@ -532,8 +608,8 @@ function update() {
         backgroundX += backgroundImg.width - 1;
     }
 
-    // Test mode modifications
-    if (testMode) {
+    // Debug mode modifications
+    if (debugMode) {
         // Prevent bird from falling through the bottom of the screen
         if (bird.y + bird.height > gameHeight) {
             bird.y = gameHeight - bird.height;
@@ -813,47 +889,8 @@ function draw() {
         ctx.textBaseline = 'alphabetic';
     }
 
-    // Display Test Mode indicator and diagnostic information if active
-    if (testMode) {
-        drawTextWithOutline('Test Mode', 10, gameHeight - 10, '#4CAF50', 'black', 2, '20px', 'bold', 'left', 'bottom');
-
-        // Diagnostic information
-        let yPos = 70;
-        [
-            `Background X: ${backgroundX.toFixed(2)}`,
-            `Bird Y: ${bird.y.toFixed(2)}`,
-            `Bird Velocity: ${bird.velocity.toFixed(2)}`,
-            `Pipes: ${pipes.length}`,
-            `Pipes Passed: ${pipesPassed}`,
-            `Pipe Speed: ${pipeSpeed.toFixed(2)}`,
-            `Frame Count: ${frameCount}`,
-            pipes.length > 0 ? `First Pipe X: ${pipes[0].x.toFixed(2)}` : ''
-        ].forEach(text => {
-            drawTextWithOutline(text, 10, yPos, 'white', 'black', 2, '20px');
-            yPos += 20;
-        });
-    }
-
-    // Debug mode drawings
-    if (debugMode) {
-        // Draw bird hitbox
-        const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase
-        const birdCenterX = bird.x + bird.width / 2;
-        const birdCenterY = bird.y + bird.height / 2;
-        ctx.beginPath();
-        ctx.arc(birdCenterX, birdCenterY, birdRadius, 0, 2 * Math.PI);
-        ctx.strokeStyle = boosting ? 'green' : 'red';
-        ctx.stroke();
-
-        // Draw pipe hitboxes
-        ctx.strokeStyle = 'blue';
-        for (let pipe of pipes) {
-            // Top pipe hitbox
-            ctx.strokeRect(pipe.x, 0, pipe.width, pipe.topHeight);
-            // Bottom pipe hitbox
-            ctx.strokeRect(pipe.x, pipe.bottomY, pipe.width, gameHeight - pipe.bottomY);
-        }
-    }
+    // Draw debug information on top of everything else
+    drawDebugInfo();
 }
 
 const GAME_FONT = "'VT323', monospace";
@@ -982,7 +1019,72 @@ window.devTools = {
         console.log(`Score set to ${newScore}`);
     },
     toggleDebugMode: function() {
-        window.debugMode = !window.debugMode;
-        console.log(`Debug mode ${window.debugMode ? 'enabled' : 'disabled'}`);
+        toggleDebugMode();
     }
 };
+
+function drawDebugInfo() {
+    if (!debugMode) return;
+
+    // Save the current canvas state
+    ctx.save();
+
+    // Draw semi-transparent overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+    // Draw hit boxes
+    ctx.lineWidth = 2;
+
+    // Bird hit box
+    const birdRadius = bird.width * 0.23;
+    const birdCenterX = bird.x + bird.width / 2;
+    const birdCenterY = bird.y + bird.height / 2;
+    
+    // Change bird hit box color based on boosting state
+    ctx.strokeStyle = boosting ? 'green' : 'red';
+    
+    ctx.beginPath();
+    ctx.arc(birdCenterX, birdCenterY, birdRadius, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    // Pipe hit boxes
+    ctx.strokeStyle = 'blue';
+    for (let pipe of pipes) {
+        ctx.strokeRect(pipe.x, 0, pipe.width, pipe.topHeight);
+        ctx.strokeRect(pipe.x, pipe.bottomY, pipe.width, gameHeight - pipe.bottomY);
+    }
+
+    // Draw "Reset All" button in top right
+    const resetButtonWidth = 100;
+    const resetButtonHeight = 40;
+    const resetButtonX = gameWidth - resetButtonWidth - 10;
+    const resetButtonY = 10;
+    drawButton(resetButtonX, resetButtonY, resetButtonWidth, resetButtonHeight, 'Reset All', '#FF4136', 'white', '16px');
+
+    // Draw debug mode indicator
+    drawTextWithOutline('Debug Mode', 10, 30, '#4CAF50', 'black', 2, '20px', 'bold', 'left', 'top');
+
+    // Diagnostic information
+    let yPos = 60;
+    [
+        `Score: ${score}`,
+        `High Score: ${hardModeActive ? hardModeHighScore : normalModeHighScore}`,
+        `Background X: ${backgroundX.toFixed(2)}`,
+        `Bird Y: ${bird.y.toFixed(2)}`,
+        `Bird Velocity: ${bird.velocity.toFixed(2)}`,
+        `Pipes: ${pipes.length}`,
+        `Pipes Passed: ${pipesPassed}`,
+        `Pipe Speed: ${pipeSpeed.toFixed(2)}`,
+        `Frame Count: ${frameCount}`,
+        `Boosting: ${boosting}`,
+        `Boost Level: ${boostLevel}`,  // Add this line
+        pipes.length > 0 ? `First Pipe X: ${pipes[0].x.toFixed(2)}` : ''
+    ].forEach(text => {
+        drawTextWithOutline(text, 10, yPos, 'white', 'black', 2, '16px');
+        yPos += 25;
+    });
+
+    // Restore the canvas state
+    ctx.restore();
+}
