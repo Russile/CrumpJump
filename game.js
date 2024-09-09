@@ -187,12 +187,32 @@ function drawCharacterSelection(x, y, width, height) {
     if (characterImages[currentCharacterIndex]) {
         const img = characterImages[currentCharacterIndex].neutral;
         if (img.complete) {
-            ctx.drawImage(img, x, y, width, height);
+            // Calculate scaling to fit the image within the given dimensions
+            const scale = Math.min(width / img.width, height / img.height);
+            const scaledWidth = img.width * scale;
+            const scaledHeight = img.height * scale;
+            const offsetX = (width - scaledWidth) / 2;
+            const offsetY = (height - scaledHeight) / 2;
+
+            ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
         } else {
             // Draw placeholder if image is not loaded
             ctx.fillStyle = 'gray';
             ctx.fillRect(x, y, width, height);
         }
+    }
+
+    if (!unlockedCharacters[currentCharacterIndex]) {
+        // Draw semi-transparent overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(x, y, width, height);
+        
+        // Draw lock icon
+        ctx.fillStyle = 'white';
+        ctx.font = `${width * 0.5}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔒', x + width / 2, y + height / 2);
     }
 
     if (!unlockedCharacters[currentCharacterIndex]) {
@@ -1282,25 +1302,35 @@ function draw() {
     ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
     ctx.rotate(bird.rotation);
 
-    if (currentCharacterIndex === 0) {
-        // Adjust these values for crump0
-        const scaleX = 1.75;  // Increase scale if crump0 is too small
-        const scaleY = 1.75;
-        const offsetX = bird.width * 0.125;  // Adjust to center horizontally
-        const offsetY = bird.height * 0.125; // Adjust to center vertically
-        
+    // Determine which image to use based on velocity
+    let imageToDraw;
+    if (bird.velocity < -1) {
+        imageToDraw = crumpImgUp;
+    } else if (bird.velocity > 1) {
+        imageToDraw = crumpImgDown;
+    } else {
+        imageToDraw = currentCrumpImg;
+    }
+
+    if (currentCharacterIndex === 'crump0') {
+        // Special handling for crump0
+        const sizeReductionFactor = 0.7; 
+        const scale = (bird.width / 78) * sizeReductionFactor;
+        const scaledWidth = 78 * scale;
+        const scaledHeight = 70 * scale;
+        const offsetX = (bird.width - scaledWidth) / 2;
+        const offsetY = (bird.height - scaledHeight) / 2;
+    
         ctx.drawImage(
-            currentCrumpImg,
-            0, 0, 200, 200,  // Source rectangle (full image)
+            imageToDraw,
             -bird.width / 2 + offsetX, -bird.height / 2 + offsetY, 
-            bird.width * scaleX, bird.height * scaleY  // Scaled size for crump0
+            scaledWidth, scaledHeight
         );
     } else {
         // Original drawing for other characters
         ctx.drawImage(
-            currentCrumpImg,
-            0, 0, 200, 200,  // Source rectangle (full image)
-            -bird.width / 2, -bird.height / 2, bird.width, bird.height  // Destination rectangle (scaled)
+            imageToDraw,
+            -bird.width / 2, -bird.height / 2, bird.width, bird.height
         );
     }
 
