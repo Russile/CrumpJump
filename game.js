@@ -316,7 +316,7 @@ function updateTrailPositions() {
         
         // Add a slight offset to position the trail behind the bird
         const trailOffsetX = 0; // Adjust this value as needed
-        const trailOffsetY = 15;  // Adjust this value as needed
+        const trailOffsetY = 0;  // Adjust this value as needed
         
         trailPositions.unshift({ 
             x: centerX + trailOffsetX, 
