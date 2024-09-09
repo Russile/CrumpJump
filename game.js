@@ -17,6 +17,24 @@ const characterNames = {
 // Add this new array to store character images
 const characterImages = [];
 
+// Define unlock conditions
+const unlockConditions = {
+    crump0: { mode: 'Hard', score: 20 },
+    crump2: { mode: 'Normal', score: 30 },
+    crump3: { mode: 'Normal', score: 50 }
+    // Add more characters and their unlock conditions here
+};
+
+function getUnlockCondition(character) {
+    const condition = unlockConditions[character];
+    if (condition) {
+        return `Score ${condition.score} in ${condition.mode} Mode`;
+    } else if (character === 'crump1') {
+        return 'Always Unlocked';
+    } else {
+        return 'Locked';
+    }
+}
 let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
@@ -28,20 +46,21 @@ function getCharacterFolders() {
 function initializeCharacters() {
     const characterFolders = getCharacterFolders();
 
-    characterFolders.forEach((folder, index) => {
-        unlockedCharacters[folder] = (folder === ALWAYS_UNLOCKED_CHARACTER);
-        characterImages[folder] = {
-            neutral: new Image(),
-            up: new Image(),
-            down: new Image()
-        };
-        characterImages[folder].neutral.src = `assets/characters/${folder}/${folder}.png`;
-        characterImages[folder].up.src = `assets/characters/${folder}/${folder}_up.png`;
-        characterImages[folder].down.src = `assets/characters/${folder}/${folder}_down.png`;
+    characterFolders.forEach((folder) => {
+        // Only initialize if it's in unlockConditions or it's the always unlocked character
+        if (unlockConditions[folder] || folder === ALWAYS_UNLOCKED_CHARACTER) {
+            characterImages[folder] = {
+                neutral: new Image(),
+                up: new Image(),
+                down: new Image()
+            };
+            characterImages[folder].neutral.src = `assets/characters/${folder}/${folder}.png`;
+            characterImages[folder].up.src = `assets/characters/${folder}/${folder}_up.png`;
+            characterImages[folder].down.src = `assets/characters/${folder}/${folder}_down.png`;
+        }
     });
 
     console.log('Initialized characters:', unlockedCharacters);
-    updateCharacterImages();
 }
 
 function updateCharacterImages() {
@@ -85,20 +104,39 @@ function showUnlockNotification(characterName) {
     }, 3000);
 }
 
+function checkAllCharacterUnlocks() {
+    Object.entries(unlockConditions).forEach(([character, condition]) => {
+        if (!unlockedCharacters[character]) {
+            const relevantScore = condition.mode === 'Hard' ? hardModeHighScore : normalModeHighScore;
+            if (relevantScore >= condition.score) {
+                unlockedCharacters[character] = true;
+                console.log(`Unlocked ${character} based on existing high score!`);
+            }
+        }
+    });
+    saveUnlockedCharacters();
+}
+
+function loadHighScores() {
+    normalModeHighScore = parseInt(localStorage.getItem('normalModeHighScore')) || 0;
+    hardModeHighScore = parseInt(localStorage.getItem('hardModeHighScore')) || 0;
+    checkAllCharacterUnlocks(); // Add this line
+}
 
 // Make sure to call this when your game initializes
 function initGame() {
-    initializeCharacters();
     loadUnlockedCharacters();
+    initializeCharacters();    
     // Ensure the current character is unlocked
     if (!unlockedCharacters[currentCharacterIndex]) {
         currentCharacterIndex = ALWAYS_UNLOCKED_CHARACTER;
     }
     updateCharacterImages();
+    loadHighScores();
+    checkAllCharacterUnlocks();
 }
 
-// Call this when your game starts
-initGame();
+
 
 // Load background image
 const backgroundImg = new Image();
@@ -151,6 +189,9 @@ let flapDownFrames = 0;
 let flapTransitionFrames = 0;
 const FLAP_DOWN_DURATION = 9; 
 const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
+
+// Call this when your game starts
+initGame();
 
 // Load pipe images
 const pipeImgs = [
@@ -266,24 +307,7 @@ function drawCharacterSelection(x, y, width, height) {
     }
 }
 
-// Define unlock conditions
-const unlockConditions = {
-    crump0: { mode: 'Hard', score: 20 },
-    crump2: { mode: 'Normal', score: 30 },
-    crump3: { mode: 'Normal', score: 50 }
-    // Add more characters and their unlock conditions here
-};
 
-function getUnlockCondition(character) {
-    const condition = unlockConditions[character];
-    if (condition) {
-        return `Score ${condition.score} in ${condition.mode} Mode`;
-    } else if (character === 'crump1') {
-        return 'Always Unlocked';
-    } else {
-        return 'Locked';
-    }
-}
 
 function switchCharacter(direction) {
     const characterFolders = getCharacterFolders();
@@ -662,27 +686,34 @@ function updateHighScore() {
             hardModeHighScore = score;
             localStorage.setItem('hardModeHighScore', hardModeHighScore.toString());
             checkCharacterUnlocks();
+            checkAllCharacterUnlocks(); // Add this line
         }
     } else {
         if (score > normalModeHighScore) {
             normalModeHighScore = score;
             localStorage.setItem('normalModeHighScore', normalModeHighScore.toString());
             checkCharacterUnlocks();
+            checkAllCharacterUnlocks(); // Add this line
         }
     }
 }
 
 function checkCharacterUnlocks() {
+    let newUnlocks = false;
     Object.entries(unlockConditions).forEach(([character, condition]) => {
         if (!unlockedCharacters[character]) {
             const relevantScore = condition.mode === 'Hard' ? hardModeHighScore : normalModeHighScore;
             if (relevantScore >= condition.score) {
                 unlockedCharacters[character] = true;
                 showUnlockNotification(characterNames[character]);
-                saveUnlockedCharacters();
+                newUnlocks = true;
+                console.log(`Unlocked ${character}!`);
             }
         }
     });
+    if (newUnlocks) {
+        saveUnlockedCharacters();
+    }
 }
 
 function drawUnlockNotification() {
@@ -716,6 +747,16 @@ function loadUnlockedCharacters() {
     if (saved) {
         unlockedCharacters = JSON.parse(saved);
     }
+    
+    // Ensure all characters from unlockConditions are initialized
+    Object.keys(unlockConditions).forEach(character => {
+        if (unlockedCharacters[character] === undefined) {
+            unlockedCharacters[character] = false;
+        }
+    });
+
+    // Always ensure the default character is unlocked
+    unlockedCharacters[ALWAYS_UNLOCKED_CHARACTER] = true;
 }
 
 function showUnlockMessage(character) {
@@ -829,7 +870,7 @@ function showResetMessage() {
 
 // Add these variables near the top of your file with other game variables
 let showingInstructions = false;
-const INSTRUCTION_TEXT = "25 points to unlock Hard Mode.\nHard Mode: Start at 20% max speed, gap sizes decreased.";
+const INSTRUCTION_TEXT = "Tap to Jump\nQuick Tap to Boost\n\nHard Mode:\nScore 25 Points to Unlock\n +20% Start Speed\n -10% Gap Size";
 
 // Add this function to draw the yellow "?" symbol
 function drawQuestionMark() {
@@ -891,25 +932,22 @@ function drawInstructionsPopup() {
     const padding = 20;
     const borderRadius = 10;
     const maxWidth = gameWidth * 0.8;
-    const lineHeight = 30;
+    const fontSize = 20;
+    const lineHeight = fontSize * 1.2; // Adjust this for desired spacing
 
-    // Measure text to determine box size
-    ctx.font = `20px ${GAME_FONT}`;
-    const paragraphs = INSTRUCTION_TEXT.split('\n');
-    let totalHeight = 0;
+    ctx.font = `${fontSize}px ${GAME_FONT}`;
+    
+    // Split the instruction text into lines
+    const lines = INSTRUCTION_TEXT.split('\n');
+    
+    let totalHeight = lines.length * lineHeight;
     let maxTextWidth = 0;
 
-    paragraphs.forEach(paragraph => {
-        const lines = wrapText(ctx, paragraph, maxWidth);
-        totalHeight += lines.length * lineHeight;
-        lines.forEach(line => {
-            const lineWidth = ctx.measureText(line).width;
-            if (lineWidth > maxTextWidth) maxTextWidth = lineWidth;
-        });
-        totalHeight += lineHeight; // Space between paragraphs
+    lines.forEach(line => {
+        const lineWidth = ctx.measureText(line).width;
+        if (lineWidth > maxTextWidth) maxTextWidth = lineWidth;
     });
 
-    // Calculate box dimensions
     const boxWidth = Math.min(maxTextWidth + padding * 2, maxWidth);
     const boxHeight = totalHeight + padding * 2;
     const boxX = (gameWidth - boxWidth) / 2;
@@ -930,20 +968,16 @@ function drawInstructionsPopup() {
 
     // Draw text
     ctx.fillStyle = 'white';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center'; // Center text alignment
+    ctx.textBaseline = 'middle'; // Align to middle of line height
 
-    let currentY = boxY + padding;
-    paragraphs.forEach(paragraph => {
-        const lines = wrapText(ctx, paragraph, maxWidth);
-        lines.forEach(line => {
-            ctx.fillText(line, boxX + padding, currentY);
-            currentY += lineHeight;
-        });
-        currentY += lineHeight; // Space between paragraphs
+    let currentY = boxY + padding + lineHeight / 2; // Start at half a line height
+    const centerX = boxX + boxWidth / 2; // Center of the box
+
+    lines.forEach(line => {
+        ctx.fillText(line, centerX, currentY);
+        currentY += lineHeight;
     });
-
-    console.log('Drawing instructions popup'); // Debug log
 }
 
 // Modify the draw function to include the developer mode features
