@@ -196,6 +196,11 @@ let flapTransitionFrames = 0;
 const FLAP_DOWN_DURATION = 3; 
 const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
 
+let scoreSubmitted = false;
+let showingLeaderboard = false;
+let currentLeaderboardData = null;
+let currentLeaderboardMode = '';
+
 // Call this when your game starts
 initGame();
 
@@ -211,21 +216,94 @@ const pipeImgs = [
     return img;
 });
 
-function createPipe() {
-    const gapHeight = 150; // Adjust this value to change difficulty
-    const minHeight = 50;
-    const maxHeight = gameHeight - gapHeight - minHeight;
-    const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
-    
-    return {
-        x: gameWidth,
-        y: topHeight + gapHeight,
-        width: 50,
-        topHeight: topHeight,
-        bottomY: topHeight + gapHeight,
-        passed: false,
-        img: pipeImgs[Math.floor(Math.random() * pipeImgs.length)]
-    };
+
+function showLeaderboard() {
+    console.log("Showing leaderboard...");
+    showingLeaderboard = true;
+    const mode = hardModeActive ? 'Hard' : 'Normal';
+    fetchLeaderboard(mode);
+}
+
+
+async function submitScore(score, mode) {
+    try {
+        // First, fetch the current leaderboard
+        const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const leaderboard = await response.json();
+
+        // Check if the current score is in the top 10
+        if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
+            const playerName = prompt("Congratulations! You made the leaderboard. Enter your name:", "Player");
+            if (playerName) {
+                const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerName, score, mode })
+                });
+                if (!submitResponse.ok) {
+                    throw new Error(`HTTP error! status: ${submitResponse.status}`);
+                }
+                const data = await submitResponse.json();
+                console.log(data.message);
+                alert("Score submitted successfully!");
+            }
+        } else {
+            console.log("Score not high enough for leaderboard.");
+        }
+    } catch (error) {
+        console.error('Error submitting score:', error);
+        alert("Failed to submit score. Please try again.");
+    }
+}
+  
+async function fetchLeaderboard(mode) {
+    try {
+        console.log(`Fetching leaderboard for ${mode} mode...`);
+        const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const leaderboard = await response.json();
+        console.log("Leaderboard data received:", leaderboard);
+        currentLeaderboardData = leaderboard;
+        currentLeaderboardMode = mode;
+        showingLeaderboard = true;
+        draw();  // Redraw to show the leaderboard
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        showingLeaderboard = false;
+        currentLeaderboardData = null;
+        currentLeaderboardMode = '';
+    }
+}
+  
+function displayLeaderboard(leaderboardData) {
+    if (!leaderboardData || leaderboardData.length === 0) {
+        // Draw an error message if there's no data
+        drawTextWithOutline('No leaderboard data available', gameWidth / 2, gameHeight / 2, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        return;
+    }
+
+    // Draw a semi-transparent background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+    // Draw leaderboard title with mode
+    const titleText = `${currentLeaderboardMode} Mode`;
+    drawTextWithOutline(titleText, gameWidth / 2, 50, '#FFD700', 'black', 3, '36px', 'bold', 'center', 'middle');
+
+    // Draw leaderboard entries
+    let yPos = 100;
+    leaderboardData.forEach((entry, index) => {
+        const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
+        drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        yPos += 40;
+    });
+
+    // We've removed the instruction to tap anywhere to close
 }
 
 function drawCharacterSelection(x, y, width, height) {
@@ -361,6 +439,7 @@ function isTapWithinButton(x, y, buttonX, buttonY, buttonWidth, buttonHeight) {
            y >= buttonY && y <= buttonY + buttonHeight;
 }
 
+
 // Add this function to handle both mouse clicks and touch events
 function handlePointerEvent(event) {
     event.preventDefault();
@@ -425,7 +504,7 @@ function handlePointerEvent(event) {
         const characterWidth = gameWidth * 0.2;
         const characterHeight = characterWidth;
         const characterX = (gameWidth - characterWidth) / 2;
-        const characterY = gameHeight * 0.45;
+        const characterY = gameHeight * 0.475;
 
         // In the character selection click handling part:
         if (isTapWithinButton(tapX, tapY, characterX - 40, characterY + characterHeight / 2 - 15, 30, 30)) {
@@ -435,6 +514,16 @@ function handlePointerEvent(event) {
 
         if (isTapWithinButton(tapX, tapY, characterX + characterWidth + 10, characterY + characterHeight / 2 - 15, 30, 30)) {
             switchCharacter(1);
+            return;
+        }
+
+        // Check if "Leaderboard" button was clicked
+        const leaderboardButtonWidth = 120; // Match the new width
+        const leaderboardButtonHeight = 25;
+        const leaderboardButtonX = (gameWidth - leaderboardButtonWidth) / 2;
+        const leaderboardButtonY = gameHeight * 0.4; // Match the new position
+        if (isTapWithinButton(tapX, tapY, leaderboardButtonX, leaderboardButtonY, leaderboardButtonWidth, leaderboardButtonHeight)) {
+            showLeaderboard();
             return;
         }
     }
@@ -503,6 +592,14 @@ function handlePointerEvent(event) {
         showCursor(); // Ensure cursor is visible on start and game over screens
     } else {
         hideCursor(); // Hide cursor during gameplay
+    }
+
+    if (showingLeaderboard) {
+        showingLeaderboard = false;
+        currentLeaderboardData = null;
+        currentLeaderboardMode = '';
+        draw(); // Redraw the game screen
+        return;
     }
 }
 
@@ -658,7 +755,10 @@ function resetGame(startInHardMode = false) {
     crumpImgDown = characterImages[currentCharacterIndex].down;
     lastPipeSpawnX = gameWidth;
     // Note: We're not resetting gameStarted to false here
-
+    gameOver = false;
+    gameOverHandled = false;
+    scoreSubmitted = false;
+    console.log("Game reset, all flags set to false");
     hardModeActive = startInHardMode;
     if (hardModeActive) {
         backgroundSpeed = INITIAL_BACKGROUND_SPEED * HARD_MODE_SPEED_MULTIPLIER;
@@ -724,14 +824,39 @@ function updateHighScore() {
             hardModeHighScore = score;
             localStorage.setItem('hardModeHighScore', hardModeHighScore.toString());
             checkCharacterUnlocks();
-            checkAllCharacterUnlocks(); // Add this line
+            checkAllCharacterUnlocks();
         }
     } else {
         if (score > normalModeHighScore) {
             normalModeHighScore = score;
             localStorage.setItem('normalModeHighScore', normalModeHighScore.toString());
             checkCharacterUnlocks();
-            checkAllCharacterUnlocks(); // Add this line
+            checkAllCharacterUnlocks();
+        }
+    }
+    // Remove score submission from here
+}
+
+let gameOverHandled = false;
+
+function handleGameOver() {
+    if (!gameOverHandled) {
+        console.log("Game Over function called");
+        gameOver = true;
+        gameOverTime = Date.now();
+        gameOverHandled = true;
+        updateHighScore();
+        submitScore(score, hardModeActive ? 'Hard' : 'Normal');
+    }
+}
+
+function promptPlayerName() {
+    if (!scoreSubmitted) {
+        console.log("Prompting for player name");
+        const playerName = prompt("Enter your name for the leaderboard:", "Player");
+        if (playerName) {
+            submitScore(playerName, score, hardModeActive ? 'Hard' : 'Normal');
+            scoreSubmitted = true;
         }
     }
 }
@@ -1147,6 +1272,13 @@ function toggleDebugMode() {
 
 function update() {
     if (!gameStarted) return;
+    if (gameOver) {
+        if (!gameOverHandled) {
+            console.log("Game over, calling handleGameOver");
+            handleGameOver();
+        }
+        return; // Exit the update function immediately if the game is over
+    }
     if (gameOver && !debugMode) {
         hideHardModeUnlockedPopup();
         showCursor();
@@ -1344,7 +1476,7 @@ function draw() {
         const characterWidth = gameWidth * 0.2;
         const characterHeight = characterWidth;
         const characterX = (gameWidth - characterWidth) / 2;
-        const characterY = gameHeight * 0.45;
+        const characterY = gameHeight * 0.475;
         drawCharacterSelection(characterX, characterY, characterWidth, characterHeight);
 
         // Calculate button dimensions and positions
@@ -1385,6 +1517,7 @@ function draw() {
         
         return;  // Don't draw anything else
     }
+
 
 
     // Draw boost trail
@@ -1537,6 +1670,8 @@ function draw() {
         drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
         drawQuestionMark();
 
+
+    
         if (Date.now() - gameOverTime < GAME_OVER_DELAY) {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(0, gameHeight - 5, (Date.now() - gameOverTime) / GAME_OVER_DELAY * gameWidth, 5);
@@ -1545,7 +1680,7 @@ function draw() {
             const characterWidth = gameWidth * 0.2;
             const characterHeight = characterWidth;
             const characterX = (gameWidth - characterWidth) / 2;
-            const characterY = gameHeight * 0.45;
+            const characterY = gameHeight * 0.475;
             drawCharacterSelection(characterX, characterY, characterWidth, characterHeight);
             
             // Calculate button dimensions and positions
@@ -1564,6 +1699,30 @@ function draw() {
                 // Draw "Hard Mode" button
                 ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
             }
+            
+            // Show Leaderboard
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Draw "Game Over" text
+            drawTextWithOutline('Game Over', gameWidth / 2, gameHeight * 0.2, '#FF4136', 'black', 3, '48px', 'bold', 'center', 'middle');
+
+            // Draw Score and High Score
+            drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+            drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+
+            // Draw "Leaderboard" button (white background, black text)
+            const leaderboardButtonWidth = 120; // Reduced width
+            const leaderboardButtonHeight = 25;
+            const leaderboardButtonX = (gameWidth - leaderboardButtonWidth) / 2;
+            const leaderboardButtonY = gameHeight * 0.4; // Moved up
+            drawButton(leaderboardButtonX, leaderboardButtonY, leaderboardButtonWidth, leaderboardButtonHeight, 'Leaderboard', '#FFFFFF', '#000000', '18px');
+
+    
+
         }
 
         ctx.textAlign = 'left';
@@ -1576,6 +1735,20 @@ function draw() {
     }
     // Draw debug information on top of everything else
     drawDebugInfo();
+
+    if (showingLeaderboard && currentLeaderboardData) {
+
+
+        displayLeaderboard(currentLeaderboardData);
+        // Draw leaderboard entries
+        let yPos = 100;
+        currentLeaderboardData.forEach((entry, index) => {
+            const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
+            drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+            yPos += 40;
+        });
+
+    }
 }
 
 const GAME_FONT = "'VT323', monospace";
