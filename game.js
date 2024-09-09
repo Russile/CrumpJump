@@ -196,13 +196,12 @@ function drawCharacterSelection(x, y, width, height) {
     }
 
     if (!unlockedCharacters[currentCharacterIndex]) {
-        // Draw semi-transparent overlay
+        // Draw semi-transparent overlay and lock icon for locked characters
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(x, y, width, height);
         
-        // Draw larger lock icon
         ctx.fillStyle = 'white';
-        ctx.font = `${width * 0.40}px Arial`; 
+        ctx.font = `${width * 0.5}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('🔒', x + width / 2, y + height / 2);
@@ -382,9 +381,21 @@ function handlePointerEvent(event) {
     } else if (gameOver) {
         if (Date.now() - gameOverTime >= GAME_OVER_DELAY) {
             if (isTapWithinButton(tapX, tapY, buttonX, normalModeButtonY, buttonWidth, buttonHeight)) {
-                restartGame(false); // Normal Mode
+                if (unlockedCharacters[currentCharacterIndex]) {
+                    startGame(false); // Normal Mode
+                } else {
+                    console.log("This character is locked. Please select an unlocked character.");
+                    // Optionally, show a message on screen
+                    showLockedCharacterMessage();
+                }
             } else if (hardModeUnlocked && isTapWithinButton(tapX, tapY, buttonX, hardModeButtonY, buttonWidth, buttonHeight)) {
-                restartGame(true); // Hard Mode
+                if (unlockedCharacters[currentCharacterIndex]) {
+                    startGame(true); // Hard Mode
+                } else {
+                    console.log("This character is locked. Please select an unlocked character.");
+                    // Optionally, show a message on screen
+                    showLockedCharacterMessage();
+                }
             }
         }
     } else {
@@ -408,6 +419,29 @@ function handlePointerEvent(event) {
     } else {
         hideCursor(); // Hide cursor during gameplay
     }
+}
+
+function showLockedCharacterMessage() {
+    // This function will display a message on screen
+    // You can implement it similar to how you show other temporary messages
+    let messageTimer = null;
+    const message = "Character locked! Select an unlocked character.";
+    
+    // Draw the message
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, gameHeight / 2 - 30, gameWidth, 60);
+    ctx.fillStyle = 'white';
+    ctx.font = `16px ${GAME_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(message, gameWidth / 2, gameHeight / 2);
+    
+    // Clear the message after a delay
+    if (messageTimer) clearTimeout(messageTimer);
+    messageTimer = setTimeout(() => {
+        // Redraw the game over screen to clear the message
+        draw();
+    }, 2000);
 }
 
 // Add these new functions to handle game actions
