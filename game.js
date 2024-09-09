@@ -316,7 +316,7 @@ document.addEventListener('keydown', function(event) {
             startGame(false); // Start in Normal Mode
         } else if (gameOver) {
             if (Date.now() - gameOverTime >= GAME_OVER_DELAY) {
-                restartGame(false); // Restart in Normal Mode
+                restartGame(hardModeActive); // Restart in the current mode
             }
         } else {
             jump();
@@ -336,7 +336,7 @@ document.addEventListener('keydown', function(event) {
         localStorage.setItem('normalModeHighScore', '0');
         localStorage.setItem('hardModeHighScore', '0');
         console.log('Normal and Hard Mode High Scores reset to 0');
-    } else if (event.key === 'd' || event.key === 'D') {
+    } else if (event.key === 'd' || key === 'D') {
         toggleDebugMode();
     }
 });
