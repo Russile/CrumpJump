@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <!-- Google tag (gtag.js) -->
+    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-70CC299NCT"></script>
     <script>
     window.dataLayer = window.dataLayer || [];
@@ -10,7 +10,7 @@
 
     gtag('config', 'G-70CC299NCT');
     </script>
-    
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Crump Jump</title>
@@ -46,9 +46,40 @@
             height: 100%;
         }
         
-        /* Add this new style */
         #gameCanvas.playing {
-            cursor: none;
+        cursor: none;
+    }
+    
+    #gameCanvas.game-over {
+        cursor: default;
+    }
+    </style>
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        #playerNameInput {
+            width: 100%;
+            padding: 5px;
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -56,6 +87,17 @@
     <div id="gameContainer">
         <canvas id="gameCanvas" width="320" height="480"></canvas>
     </div>
+    
+
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <h2>Congratulations!</h2>
+            <p>You made the leaderboard. Enter your name:</p>
+            <input type="text" id="playerNameInput" maxlength="15" autocapitalize="words">
+            <button id="submitName">Submit</button>
+        </div>
+    </div>
+    
     <script src="game.js"></script>
 </body>
 </html>

@@ -238,17 +238,8 @@ async function submitScore(score, mode) {
         const leaderboard = await response.json();
 
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
-            let playerName = prompt("Congratulations! You made the leaderboard. Enter your name (max 15 characters):", "Player");
-            
+            const playerName = await showNameInputModal();
             if (playerName) {
-                // Sanitize and limit the input
-                playerName = sanitizeInput(playerName).substring(0, 15);
-                
-                if (playerName.length === 0) {
-                    alert("Invalid name. Please try again.");
-                    return;
-                }
-
                 const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -267,6 +258,39 @@ async function submitScore(score, mode) {
         console.error('Error submitting score:', error);
         alert("Failed to submit score. Please try again.");
     }
+}
+
+let isModalOpen = false;
+function showNameInputModal() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('nameModal');
+        const input = document.getElementById('playerNameInput');
+        const submitButton = document.getElementById('submitName');
+
+        modal.style.display = 'block';
+        input.focus();
+        isModalOpen = true;
+
+        submitButton.onclick = () => {
+            const playerName = sanitizeInput(input.value);
+            if (playerName.length > 0) {
+                modal.style.display = 'none';
+                isModalOpen = false;
+                resolve(playerName);
+            } else {
+                alert("Please enter a valid name.");
+            }
+        };
+
+        // Allow closing the modal by clicking outside
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                isModalOpen = false;
+                resolve(null);
+            }
+        };
+    });
 }
   
 async function fetchLeaderboard(mode) {
@@ -453,6 +477,7 @@ function isTapWithinButton(x, y, buttonX, buttonY, buttonWidth, buttonHeight) {
 // Add this function to handle both mouse clicks and touch events
 function handlePointerEvent(event) {
     event.preventDefault();
+    if (isModalOpen) return;  // Ignore input if modal is open
 
     let tapX, tapY;
     
@@ -679,6 +704,8 @@ canvas.addEventListener('mousedown', handlePointerEvent);
 
 // Modify the keydown event listener
 document.addEventListener('keydown', function(event) {
+    if (isModalOpen) return;  // Ignore input if modal is open
+
     if (event.code === 'Space') {
         if (!gameStarted) {
             startGame(false); // Start in Normal Mode
@@ -1281,10 +1308,12 @@ function toggleDebugMode() {
 }
 
 function update() {
+    if (isModalOpen) return;  // Pause game updates if modal is open
     if (!gameStarted) return;
     if (gameOver) {
         if (!gameOverHandled) {
             console.log("Game over, calling handleGameOver");
+            showCursor();
             handleGameOver();
         }
         return; // Exit the update function immediately if the game is over
@@ -1293,6 +1322,8 @@ function update() {
         hideHardModeUnlockedPopup();
         showCursor();
         return;
+    } else {
+        hideCursor();
     }
 
     frameCount++;
@@ -1777,13 +1808,14 @@ function drawTextWithOutline(text, x, y, fillStyle, strokeStyle, lineWidth, font
     ctx.fillText(text, x, y);
 }
 
-// Add these new functions near the top of your file
 function hideCursor() {
-    canvas.style.cursor = 'none';
+    document.getElementById('gameCanvas').classList.add('playing');
+    document.getElementById('gameCanvas').classList.remove('game-over');
 }
 
 function showCursor() {
-    canvas.style.cursor = 'auto';
+    document.getElementById('gameCanvas').classList.remove('playing');
+    document.getElementById('gameCanvas').classList.add('game-over');
 }
 
 // Add these event listeners at the end of your file
