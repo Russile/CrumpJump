@@ -259,7 +259,7 @@ async function submitScore(score, mode) {
 async function fetchLeaderboard(mode) {
     try {
         console.log(`Fetching leaderboard for ${mode} mode...`);
-        const response = await fetch(`http://localhost:3000/api/leaderboard/${mode}`);
+        const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
