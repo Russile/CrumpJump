@@ -5,15 +5,27 @@ const ctx = canvas.getContext('2d');
 const gameWidth = 320;
 const gameHeight = 480;
 
-// Load bird images
-const crumpImg = new Image();
-crumpImg.src = 'crump.png';
-const crumpImgUp = new Image();
-crumpImgUp.src = 'crump_up.png';
-const crumpImgDown = new Image();
-crumpImgDown.src = 'crump_down.png';
+const TOTAL_CHARACTERS = 3;
+let currentCharacterIndex = 1; // Start with crump1 by default
 
-let currentCrumpImg = crumpImg;
+// Add this new array to store character images
+const characterImages = [];
+
+for (let i = 0; i < TOTAL_CHARACTERS; i++) {
+    characterImages.push({
+        neutral: new Image(),
+        up: new Image(),
+        down: new Image()
+    });
+    characterImages[i].neutral.src = `assets/characters/crump${i}/crump${i}.png`;
+    characterImages[i].up.src = `assets/characters/crump${i}/crump${i}_up.png`;
+    characterImages[i].down.src = `assets/characters/crump${i}/crump${i}_down.png`;
+}
+
+// Load bird images
+let currentCrumpImg = characterImages[currentCharacterIndex].neutral;
+let crumpImgUp = characterImages[currentCharacterIndex].up;
+let crumpImgDown = characterImages[currentCharacterIndex].down;
 
 // Load background image
 const backgroundImg = new Image();
@@ -96,6 +108,40 @@ function createPipe() {
     };
 }
 
+function switchCharacter(direction) {
+    currentCharacterIndex = (currentCharacterIndex + direction + TOTAL_CHARACTERS) % TOTAL_CHARACTERS;
+    currentCrumpImg = characterImages[currentCharacterIndex].neutral;
+    crumpImgUp = characterImages[currentCharacterIndex].up;
+    crumpImgDown = characterImages[currentCharacterIndex].down;
+}
+
+function drawCharacterSelection(x, y, width, height) {
+    // Draw character
+    ctx.drawImage(characterImages[currentCharacterIndex].up, x, y, width, height);
+
+    // Draw arrow buttons
+    const arrowWidth = 30;
+    const arrowHeight = 30;
+    const arrowY = y + height / 2 - arrowHeight / 2;
+
+    // Left arrow
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.moveTo(x - arrowWidth - 10, arrowY + arrowHeight / 2);
+    ctx.lineTo(x - 10, arrowY);
+    ctx.lineTo(x - 10, arrowY + arrowHeight);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right arrow
+    ctx.beginPath();
+    ctx.moveTo(x + width + arrowWidth + 10, arrowY + arrowHeight / 2);
+    ctx.lineTo(x + width + 10, arrowY);
+    ctx.lineTo(x + width + 10, arrowY + arrowHeight);
+    ctx.closePath();
+    ctx.fill();
+}
+
 // Add this function to check if a tap is within a button area
 function isTapWithinButton(x, y, buttonX, buttonY, buttonWidth, buttonHeight) {
     return x >= buttonX && x <= buttonX + buttonWidth &&
@@ -137,7 +183,7 @@ function handlePointerEvent(event) {
         const logoWidth = gameWidth * 0.8;
         const logoHeight = logoWidth / (640 / 428);
         const logoX = (gameWidth - logoWidth) / 2;
-        const logoY = gameHeight * 0.25;
+        const logoY = gameHeight * 0.05;
 
         if (isTapWithinButton(tapX, tapY, logoX, logoY, logoWidth, logoHeight)) {
             handleLogoClick();
@@ -145,6 +191,26 @@ function handlePointerEvent(event) {
         }
     }
 
+    // Check for character selection clicks
+    if (!gameStarted || gameOver) {
+        const characterWidth = gameWidth * 0.2;
+        const characterHeight = characterWidth;
+        const characterX = (gameWidth - characterWidth) / 2;
+        const characterY = gameHeight * 0.45;
+
+        // Check for left arrow click
+        if (isTapWithinButton(tapX, tapY, characterX - 40, characterY + characterHeight / 2 - 15, 30, 30)) {
+            switchCharacter(-1);
+            return;
+        }
+
+        // Check for right arrow click
+        if (isTapWithinButton(tapX, tapY, characterX + characterWidth + 10, characterY + characterHeight / 2 - 15, 30, 30)) {
+            switchCharacter(1);
+            return;
+        }
+    }
+    
     const buttonWidth = 140; // Match the new button width
     const buttonHeight = buttonWidth * (200 / 480);
     const buttonSpacing = 15;
@@ -314,7 +380,9 @@ function resetGame(startInHardMode = false) {
     lastFlapDirection = 0;
     flapDownFrames = 0;
     flapTransitionFrames = 0;
-    currentCrumpImg = crumpImg; // Start with neutral image
+    currentCrumpImg = characterImages[currentCharacterIndex].neutral;
+    crumpImgUp = characterImages[currentCharacterIndex].up;
+    crumpImgDown = characterImages[currentCharacterIndex].down;
     lastPipeSpawnX = gameWidth;
     // Note: We're not resetting gameStarted to false here
 
@@ -522,16 +590,34 @@ function draw() {
         // ... (rest of the pipe drawing code) ...
     });
 
-    // Draw bird
-    ctx.save();
-    ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
-    ctx.rotate(bird.rotation);
+// Draw bird
+ctx.save();
+ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
+ctx.rotate(bird.rotation);
+
+if (currentCharacterIndex === 0) {
+    // Adjust these values for crump0
+    const scaleX = 3.75;  // Increase scale if crump0 is too small
+    const scaleY = 3.75;
+    const offsetX = -bird.width * 0.125;  // Adjust to center horizontally
+    const offsetY = -bird.height * 0.125; // Adjust to center vertically
+    
+    ctx.drawImage(
+        currentCrumpImg,
+        0, 0, 200, 200,  // Source rectangle (full image)
+        -bird.width / 2 + offsetX, -bird.height / 2 + offsetY, 
+        bird.width * scaleX, bird.height * scaleY  // Scaled size for crump0
+    );
+} else {
+    // Original drawing for other characters
     ctx.drawImage(
         currentCrumpImg,
         0, 0, 200, 200,  // Source rectangle (full image)
         -bird.width / 2, -bird.height / 2, bird.width, bird.height  // Destination rectangle (scaled)
     );
-    ctx.restore();
+}
+
+ctx.restore();
 
     // Draw score
     drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
@@ -613,12 +699,12 @@ function update() {
         currentCrumpImg = crumpImgDown;
     } else if (flapTransitionFrames > 0) {
         flapTransitionFrames--;
-        currentCrumpImg = crumpImg;
+        currentCrumpImg = characterImages[currentCharacterIndex].neutral;
     } else {
         if (bird.velocity >= 0) {
             currentCrumpImg = crumpImgUp;
         } else {
-            currentCrumpImg = crumpImg;
+            currentCrumpImg = characterImages[currentCharacterIndex].neutral;
         }
     }
 
@@ -750,15 +836,22 @@ function draw() {
         }
 
         const logoX = (gameWidth - logoWidth) / 2;
-        const logoY = gameHeight * 0.25; // Adjust this value to move the logo up or down
+        const logoY = gameHeight * 0.05; // Adjust this value to move the logo up or down
 
         ctx.drawImage(titleLogoImg, logoX, logoY, logoWidth, logoHeight);
 
+        // Draw character selection
+        const characterWidth = gameWidth * 0.2;
+        const characterHeight = characterWidth;
+        const characterX = (gameWidth - characterWidth) / 2;
+        const characterY = gameHeight * 0.45;
+        drawCharacterSelection(characterX, characterY, characterWidth, characterHeight);
+
         // Calculate button dimensions and positions
-        const buttonWidth = 140; // Increased from 120
-        const buttonHeight = buttonWidth * (200 / 480); // Maintain aspect ratio
-        const buttonSpacing = 15; // Slightly increased from 10
-        const bottomMargin = 30; // Increased from 20
+        const buttonWidth = 140;
+        const buttonHeight = buttonWidth * (200 / 480);
+        const buttonSpacing = 15;
+        const bottomMargin = 30;
         const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
         const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
         const buttonX = (gameWidth - buttonWidth) / 2;
@@ -791,11 +884,29 @@ function draw() {
     ctx.save();
     ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
     ctx.rotate(bird.rotation);
-    ctx.drawImage(
-        currentCrumpImg,
-        0, 0, 200, 200,  // Source rectangle (full image)
-        -bird.width / 2, -bird.height / 2, bird.width, bird.height  // Destination rectangle (scaled)
-    );
+
+    if (currentCharacterIndex === 0) {
+        // Adjust these values for crump0
+        const scaleX = 1.75;  // Increase scale if crump0 is too small
+        const scaleY = 1.75;
+        const offsetX = bird.width * 0.125;  // Adjust to center horizontally
+        const offsetY = bird.height * 0.125; // Adjust to center vertically
+        
+        ctx.drawImage(
+            currentCrumpImg,
+            0, 0, 200, 200,  // Source rectangle (full image)
+            -bird.width / 2 + offsetX, -bird.height / 2 + offsetY, 
+            bird.width * scaleX, bird.height * scaleY  // Scaled size for crump0
+        );
+    } else {
+        // Original drawing for other characters
+        ctx.drawImage(
+            currentCrumpImg,
+            0, 0, 200, 200,  // Source rectangle (full image)
+            -bird.width / 2, -bird.height / 2, bird.width, bird.height  // Destination rectangle (scaled)
+        );
+    }
+
     ctx.restore();
 
     // Draw pipes
@@ -896,22 +1007,30 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Game Over text
-        drawTextWithOutline('Game Over', gameWidth / 2, gameHeight * 0.3, '#FF4136', 'black', 3, '48px', 'bold', 'center', 'middle');
+        // Move "Game Over" text up
+        drawTextWithOutline('Game Over', gameWidth / 2, gameHeight * 0.2, '#FF4136', 'black', 3, '48px', 'bold', 'center', 'middle');
 
-        // Score and High Score
-        drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.45, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
-        drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.55, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+        // Move Score and High Score up
+        drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+        drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+
 
         if (Date.now() - gameOverTime < GAME_OVER_DELAY) {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(0, gameHeight - 5, (Date.now() - gameOverTime) / GAME_OVER_DELAY * gameWidth, 5);
         } else {
+            // Draw character selection
+            const characterWidth = gameWidth * 0.2;
+            const characterHeight = characterWidth;
+            const characterX = (gameWidth - characterWidth) / 2;
+            const characterY = gameHeight * 0.45;
+            drawCharacterSelection(characterX, characterY, characterWidth, characterHeight);
+            
             // Calculate button dimensions and positions
-            const buttonWidth = 140; // Increased from 120
-            const buttonHeight = buttonWidth * (200 / 480); // Maintain aspect ratio
-            const buttonSpacing = 15; // Slightly increased from 10
-            const bottomMargin = 30; // Increased from 20
+            const buttonWidth = 140;
+            const buttonHeight = buttonWidth * (200 / 480);
+            const buttonSpacing = 15;
+            const bottomMargin = 30;
             const hardModeButtonY = gameHeight - bottomMargin - buttonHeight;
             const normalModeButtonY = hardModeButtonY - buttonHeight - buttonSpacing;
             const buttonX = (gameWidth - buttonWidth) / 2;
@@ -997,7 +1116,7 @@ function drawButton(x, y, width, height, text, fillColor, textColor, fontSize = 
 // Ensure all images are loaded before starting the game
 Promise.all([
     ...pipeImgs.map(img => img.decode()),
-    crumpImg.decode(),
+    currentCrumpImg.decode(),
     crumpImgUp.decode(),
     crumpImgDown.decode(),
     backgroundImg.decode(),
