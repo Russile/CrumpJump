@@ -171,8 +171,7 @@ function handlePointerEvent(event) {
         jump();
     }
 
-    if (debugMode) {
-        // Check for "Reset All" button click
+    if (debugMode && !gameStarted) {
         const resetButtonWidth = 100;
         const resetButtonHeight = 40;
         const resetButtonX = gameWidth - resetButtonWidth - 10;
@@ -431,7 +430,7 @@ function handleLogoClick() {
     const currentTime = Date.now();
     if (currentTime - lastLogoClickTime < LOGO_CLICK_THRESHOLD) {
         logoClickCount++;
-        if (logoClickCount === LOGO_CLICKS_REQUIRED) {
+        if (logoClickCount >= LOGO_CLICKS_REQUIRED) {
             toggleDebugMode();
             logoClickCount = 0;
         }
@@ -439,6 +438,7 @@ function handleLogoClick() {
         logoClickCount = 1;
     }
     lastLogoClickTime = currentTime;
+    console.log(`Logo clicked. Count: ${logoClickCount}`); // Add this line for debugging
 }
 
 // Add this new function to reset all variables
@@ -490,9 +490,36 @@ function draw() {
     ctx.drawImage(backgroundImg, Math.floor(backgroundX), 0);
     ctx.drawImage(backgroundImg, Math.floor(backgroundX) + backgroundImg.width - 1, 0);
 
+    if (!gameStarted) {
+        // Draw start screen
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+        // Draw title logo image
+        // ... (rest of the logo drawing code) ...
+
+        // Draw mode buttons
+        // ... (rest of the mode button drawing code) ...
+
+        // Draw debug mode indicator and "Reset All" button if debug mode is active
+        if (debugMode) {
+            // Draw debug mode indicator
+            drawTextWithOutline('Debug Mode', 10, 30, '#4CAF50', 'black', 2, '20px', 'bold', 'left', 'top');
+
+            // Draw "Reset All" button in top right
+            const resetButtonWidth = 100;
+            const resetButtonHeight = 40;
+            const resetButtonX = gameWidth - resetButtonWidth - 10;
+            const resetButtonY = 10;
+            drawButton(resetButtonX, resetButtonY, resetButtonWidth, resetButtonHeight, 'Reset All', '#FF4136', 'white', '16px');
+        }
+
+        return;  // Don't draw anything else
+    }
+
     // Draw pipes
     pipes.forEach(pipe => {
-        // ... existing pipe drawing code ...
+        // ... (rest of the pipe drawing code) ...
     });
 
     // Draw bird
@@ -742,6 +769,19 @@ function draw() {
         if (hardModeUnlocked) {
             // Draw "Hard Mode" button
             ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
+        }
+
+        // Draw debug mode indicator and "Reset All" button if debug mode is active
+        if (debugMode) {
+            // Draw debug mode indicator
+            drawTextWithOutline('Debug Mode', 10, 30, '#4CAF50', 'black', 2, '20px', 'bold', 'left', 'top');
+
+            // Draw "Reset All" button in top right
+            const resetButtonWidth = 100;
+            const resetButtonHeight = 40;
+            const resetButtonX = gameWidth - resetButtonWidth - 10;
+            const resetButtonY = 10;
+            drawButton(resetButtonX, resetButtonY, resetButtonWidth, resetButtonHeight, 'Reset All', '#FF4136', 'white', '16px');
         }
 
         return;  // Don't draw anything else
