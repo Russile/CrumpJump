@@ -238,11 +238,14 @@ async function submitScore(score, mode) {
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
             const playerName = prompt("Congratulations! You made the leaderboard. Enter your name:", "Player");
             if (playerName) {
-                const response = await fetch('https://crumpjump.onrender.com/api/scores', {
+                const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ playerName, score, mode })
                 });
+                if (!submitResponse.ok) {
+                    throw new Error(`HTTP error! status: ${submitResponse.status}`);
+                }
                 const data = await submitResponse.json();
                 console.log(data.message);
                 alert("Score submitted successfully!");
