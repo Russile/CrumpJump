@@ -10,7 +10,8 @@ let currentCharacterIndex = 'crump1'; // Start with crump1 by default
 const characterNames = {
     crump0: 'CRUMPLESTILTSKIN',
     crump1: 'CRUMP',
-    crump2: 'STACH'
+    crump2: 'STASH',
+    crump3: 'GOOGINI'
     // Add more character names as needed
 };
 // Add this new array to store character images
@@ -20,7 +21,8 @@ let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
 function getCharacterFolders() {
-    return ['crump0', 'crump1', 'crump2']; 
+    return ['crump0', 'crump1', 'crump2', 'crump3'
+    ]; 
 }
 
 function initializeCharacters() {
@@ -185,7 +187,7 @@ function drawCharacterSelection(x, y, width, height) {
 
     // Draw character
     if (characterImages[currentCharacterIndex]) {
-        const img = characterImages[currentCharacterIndex].neutral;
+        const img = characterImages[currentCharacterIndex].up;
         if (img.complete) {
             // Calculate scaling to fit the image within the given dimensions
             const scale = Math.min(width / img.width, height / img.height);
@@ -267,7 +269,8 @@ function drawCharacterSelection(x, y, width, height) {
 // Define unlock conditions
 const unlockConditions = {
     crump0: { mode: 'Hard', score: 20 },
-    crump2: { mode: 'Normal', score: 50 }
+    crump2: { mode: 'Normal', score: 30 },
+    crump3: { mode: 'Normal', score: 50 }
     // Add more characters and their unlock conditions here
 };
 
@@ -1314,10 +1317,10 @@ function draw() {
 
     if (currentCharacterIndex === 'crump0') {
         // Special handling for crump0
-        const sizeReductionFactor = 0.9; // Adjust as needed
-        const scale = (bird.width / 78) * sizeReductionFactor;
-        const scaledWidth = 78 * scale;
-        const scaledHeight = 70 * scale;
+        const sizeReductionFactor = 0.7; // Adjust as needed
+        const scale = (bird.width / 70) * sizeReductionFactor;
+        const scaledWidth = 70 * scale;
+        const scaledHeight = 79 * scale;
         const offsetX = (bird.width - scaledWidth) / 2;
         const offsetY = (bird.height - scaledHeight) / 2;
 
