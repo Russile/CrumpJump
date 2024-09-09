@@ -1305,22 +1305,22 @@ function draw() {
     // Determine which image to use based on velocity
     let imageToDraw;
     if (bird.velocity < -1) {
-        imageToDraw = crumpImgUp;
+        imageToDraw = crumpImgDown;  // Changed from crumpImgUp
     } else if (bird.velocity > 1) {
-        imageToDraw = crumpImgDown;
+        imageToDraw = crumpImgUp;    // Changed from crumpImgDown
     } else {
         imageToDraw = currentCrumpImg;
     }
 
     if (currentCharacterIndex === 'crump0') {
         // Special handling for crump0
-        const sizeReductionFactor = 0.7; 
+        const sizeReductionFactor = 0.9; // Adjust as needed
         const scale = (bird.width / 78) * sizeReductionFactor;
         const scaledWidth = 78 * scale;
         const scaledHeight = 70 * scale;
         const offsetX = (bird.width - scaledWidth) / 2;
         const offsetY = (bird.height - scaledHeight) / 2;
-    
+
         ctx.drawImage(
             imageToDraw,
             -bird.width / 2 + offsetX, -bird.height / 2 + offsetY, 
