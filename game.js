@@ -181,7 +181,7 @@ function drawCharacterSelection(x, y, width, height) {
         
         // Draw larger lock icon
         ctx.fillStyle = 'white';
-        ctx.font = `${width * 0.75}px Arial`; // Increased to 75% of width for an even larger icon
+        ctx.font = `${width * 0.40}px Arial`; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('🔒', x + width / 2, y + height / 2);
