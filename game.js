@@ -6,26 +6,76 @@ const gameWidth = 320;
 const gameHeight = 480;
 
 const TOTAL_CHARACTERS = 3;
-let currentCharacterIndex = 1; // Start with crump1 by default
-
+let currentCharacterIndex = 'crump1'; // Start with crump1 by default
+const characterNames = {
+    crump0: 'CRUMPLESTILTSKIN',
+    crump1: 'CRUMP',
+    crump2: 'STACH'
+    // Add more character names as needed
+};
 // Add this new array to store character images
 const characterImages = [];
 
-for (let i = 0; i < TOTAL_CHARACTERS; i++) {
-    characterImages.push({
-        neutral: new Image(),
-        up: new Image(),
-        down: new Image()
-    });
-    characterImages[i].neutral.src = `assets/characters/crump${i}/crump${i}.png`;
-    characterImages[i].up.src = `assets/characters/crump${i}/crump${i}_up.png`;
-    characterImages[i].down.src = `assets/characters/crump${i}/crump${i}_down.png`;
+let unlockedCharacters = {};
+const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
+
+function getCharacterFolders() {
+    return ['crump0', 'crump1', 'crump2']; 
 }
 
-// Load bird images
-let currentCrumpImg = characterImages[currentCharacterIndex].neutral;
-let crumpImgUp = characterImages[currentCharacterIndex].up;
-let crumpImgDown = characterImages[currentCharacterIndex].down;
+function initializeCharacters() {
+    const characterFolders = getCharacterFolders();
+
+    characterFolders.forEach((folder, index) => {
+        unlockedCharacters[folder] = (folder === ALWAYS_UNLOCKED_CHARACTER);
+        characterImages[folder] = {
+            neutral: new Image(),
+            up: new Image(),
+            down: new Image()
+        };
+        characterImages[folder].neutral.src = `assets/characters/${folder}/${folder}.png`;
+        characterImages[folder].up.src = `assets/characters/${folder}/${folder}_up.png`;
+        characterImages[folder].down.src = `assets/characters/${folder}/${folder}_down.png`;
+    });
+
+    console.log('Initialized characters:', unlockedCharacters);
+    updateCharacterImages();
+}
+
+function updateCharacterImages() {
+    if (characterImages[currentCharacterIndex]) {
+        currentCrumpImg = characterImages[currentCharacterIndex].neutral;
+        crumpImgUp = characterImages[currentCharacterIndex].up;
+        crumpImgDown = characterImages[currentCharacterIndex].down;
+    } else {
+        console.error('Current character not found:', currentCharacterIndex);
+        // Set to default character if current one is not found
+        currentCharacterIndex = ALWAYS_UNLOCKED_CHARACTER;
+        updateCharacterImages();
+    }
+}
+
+function switchCharacter(direction) {
+    let availableCharacters = Object.keys(unlockedCharacters).filter(char => unlockedCharacters[char]);
+    let currentIndex = availableCharacters.indexOf(currentCharacterIndex);
+    currentIndex = (currentIndex + direction + availableCharacters.length) % availableCharacters.length;
+    currentCharacterIndex = availableCharacters[currentIndex];
+    updateCharacterImages();
+}
+
+// Make sure to call this when your game initializes
+function initGame() {
+    initializeCharacters();
+    loadUnlockedCharacters();
+    // Ensure the current character is unlocked
+    if (!unlockedCharacters[currentCharacterIndex]) {
+        currentCharacterIndex = ALWAYS_UNLOCKED_CHARACTER;
+    }
+    updateCharacterImages();
+}
+
+// Call this when your game starts
+initGame();
 
 // Load background image
 const backgroundImg = new Image();
@@ -108,27 +158,33 @@ function createPipe() {
     };
 }
 
-function switchCharacter(direction) {
-    currentCharacterIndex = (currentCharacterIndex + direction + TOTAL_CHARACTERS) % TOTAL_CHARACTERS;
-    currentCrumpImg = characterImages[currentCharacterIndex].neutral;
-    crumpImgUp = characterImages[currentCharacterIndex].up;
-    crumpImgDown = characterImages[currentCharacterIndex].down;
-}
-
 function drawCharacterSelection(x, y, width, height) {
+    const characterFolders = getCharacterFolders();
+    const currentIndex = characterFolders.indexOf(currentCharacterIndex);
+
     // Draw character
-    if (currentCharacterIndex === 0) {
-        // Smaller scale for crump0
-        const scaleX = 0.8;
-        const scaleY = 0.8;
-        const scaledWidth = width * scaleX;
-        const scaledHeight = height * scaleY;
-        const offsetX = (width - scaledWidth) / 2;
-        const offsetY = (height - scaledHeight) / 2;
-        ctx.drawImage(characterImages[currentCharacterIndex].up, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
-    } else {
-        // Original scale for other characters
-        ctx.drawImage(characterImages[currentCharacterIndex].up, x, y, width, height);
+    if (characterImages[currentCharacterIndex]) {
+        const img = characterImages[currentCharacterIndex].neutral;
+        if (img.complete) {
+            ctx.drawImage(img, x, y, width, height);
+        } else {
+            // Draw placeholder if image is not loaded
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(x, y, width, height);
+        }
+    }
+
+    if (!unlockedCharacters[currentCharacterIndex]) {
+        // Draw semi-transparent overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(x, y, width, height);
+        
+        // Draw larger lock icon
+        ctx.fillStyle = 'white';
+        ctx.font = `${width * 0.75}px Arial`; // Increased to 75% of width for an even larger icon
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔒', x + width / 2, y + height / 2);
     }
 
     // Draw arrow buttons
@@ -152,6 +208,46 @@ function drawCharacterSelection(x, y, width, height) {
     ctx.lineTo(x + width + 10, arrowY + arrowHeight);
     ctx.closePath();
     ctx.fill();
+
+    // Draw character name
+    ctx.fillStyle = 'white';
+    ctx.font = `20px ${GAME_FONT}`; // Updated to use GAME_FONT
+    ctx.textAlign = 'center';
+    const name = characterNames[currentCharacterIndex] || currentCharacterIndex;
+    ctx.fillText(name, x + width / 2, y + height + 10);
+    
+    // Draw unlock condition
+    if (!unlockedCharacters[currentCharacterIndex]) {
+        ctx.fillStyle = 'yellow';
+        ctx.font = `14px ${GAME_FONT}`; // Updated to use GAME_FONT
+        ctx.fillText(getUnlockCondition(currentCharacterIndex), x + width / 2, y + height + 25);
+    }
+}
+
+// Define unlock conditions
+const unlockConditions = {
+    crump0: { mode: 'Hard', score: 20 },
+    crump2: { mode: 'Normal', score: 50 }
+    // Add more characters and their unlock conditions here
+};
+
+function getUnlockCondition(character) {
+    const condition = unlockConditions[character];
+    if (condition) {
+        return `Score ${condition.score} in ${condition.mode} Mode`;
+    } else if (character === 'crump1') {
+        return 'Always Unlocked';
+    } else {
+        return 'Locked';
+    }
+}
+
+function switchCharacter(direction) {
+    const characterFolders = getCharacterFolders();
+    let currentIndex = characterFolders.indexOf(currentCharacterIndex);
+    currentIndex = (currentIndex + direction + characterFolders.length) % characterFolders.length;
+    currentCharacterIndex = characterFolders[currentIndex];
+    updateCharacterImages();
 }
 
 // Add this function to check if a tap is within a button area
@@ -202,6 +298,7 @@ function handlePointerEvent(event) {
     if (isQuestionMarkClicked(tapX, tapY)) {
         showingInstructions = !showingInstructions;
         console.log(`Toggled instructions: ${showingInstructions}`); // Debug log
+        draw(); // Force an immediate redraw
         return;
     }
 
@@ -225,13 +322,12 @@ function handlePointerEvent(event) {
         const characterX = (gameWidth - characterWidth) / 2;
         const characterY = gameHeight * 0.45;
 
-        // Check for left arrow click
+        // In the character selection click handling part:
         if (isTapWithinButton(tapX, tapY, characterX - 40, characterY + characterHeight / 2 - 15, 30, 30)) {
             switchCharacter(-1);
             return;
         }
 
-        // Check for right arrow click
         if (isTapWithinButton(tapX, tapY, characterX + characterWidth + 10, characterY + characterHeight / 2 - 15, 30, 30)) {
             switchCharacter(1);
             return;
@@ -248,9 +344,19 @@ function handlePointerEvent(event) {
 
     if (!gameStarted) {
         if (isTapWithinButton(tapX, tapY, buttonX, normalModeButtonY, buttonWidth, buttonHeight)) {
-            startGame(false); // Normal Mode
+            if (unlockedCharacters[currentCharacterIndex]) {
+                startGame(false); // Normal Mode
+            } else {
+                console.log("This character is locked. Please select an unlocked character.");
+                // You could also display this message on the canvas
+            }
         } else if (hardModeUnlocked && isTapWithinButton(tapX, tapY, buttonX, hardModeButtonY, buttonWidth, buttonHeight)) {
-            startGame(true); // Hard Mode
+            if (unlockedCharacters[currentCharacterIndex]) {
+                startGame(true); // Hard Mode
+            } else {
+                console.log("This character is locked. Please select an unlocked character.");
+                // You could also display this message on the canvas
+            }
         }
     } else if (gameOver) {
         if (Date.now() - gameOverTime >= GAME_OVER_DELAY) {
@@ -351,7 +457,7 @@ document.addEventListener('keydown', function(event) {
         localStorage.setItem('normalModeHighScore', '0');
         localStorage.setItem('hardModeHighScore', '0');
         console.log('Normal and Hard Mode High Scores reset to 0');
-    } else if (event.key === 'd' || key === 'D') {
+    } else if (event.key === 'd' || event.key === 'D') {
         toggleDebugMode();
     }
 });
@@ -477,13 +583,45 @@ function updateHighScore() {
         if (score > hardModeHighScore) {
             hardModeHighScore = score;
             localStorage.setItem('hardModeHighScore', hardModeHighScore.toString());
+            checkCharacterUnlocks();
         }
     } else {
         if (score > normalModeHighScore) {
             normalModeHighScore = score;
             localStorage.setItem('normalModeHighScore', normalModeHighScore.toString());
+            checkCharacterUnlocks();
         }
     }
+}
+
+function checkCharacterUnlocks() {
+    Object.entries(unlockConditions).forEach(([character, condition]) => {
+        if (!unlockedCharacters[character]) {
+            const relevantScore = condition.mode === 'Hard' ? hardModeHighScore : normalModeHighScore;
+            if (relevantScore >= condition.score) {
+                unlockedCharacters[character] = true;
+                showUnlockMessage(character);
+            }
+        }
+    });
+    saveUnlockedCharacters();
+}
+
+function saveUnlockedCharacters() {
+    localStorage.setItem('unlockedCharacters', JSON.stringify(unlockedCharacters));
+}
+
+function loadUnlockedCharacters() {
+    const saved = localStorage.getItem('unlockedCharacters');
+    if (saved) {
+        unlockedCharacters = JSON.parse(saved);
+    }
+}
+
+function showUnlockMessage(character) {
+    // Implement a function to show a message when a new character is unlocked
+    console.log(`Unlocked ${character}!`);
+    // You can add code here to display a message on the screen
 }
 
 const FIXED_DELTA_TIME = 1 / 60; // 60 FPS logic update
@@ -536,7 +674,6 @@ function handleLogoClick() {
     console.log(`Logo clicked. Count: ${logoClickCount}`); // Add this line for debugging
 }
 
-// Add this new function to reset all variables
 function resetAllVariables() {
     normalModeHighScore = 0;
     hardModeHighScore = 0;
@@ -544,8 +681,20 @@ function resetAllVariables() {
     localStorage.setItem('normalModeHighScore', '0');
     localStorage.setItem('hardModeHighScore', '0');
     localStorage.setItem('hardModeUnlocked', 'false');
-    console.log('All variables reset');
-    // You can add a visual feedback here, like a flash or a message
+
+    // Reset unlocked characters
+    const characterFolders = getCharacterFolders();
+    unlockedCharacters = {};
+    characterFolders.forEach(character => {
+        unlockedCharacters[character] = (character === 'crump1');  // Only crump1 is unlocked
+    });
+    localStorage.setItem('unlockedCharacters', JSON.stringify(unlockedCharacters));
+
+    // Reset current character to the default unlocked one
+    currentCharacterIndex = 'crump1';
+    updateCharacterImages();
+
+    console.log('All variables reset, including unlocked characters');
     showResetMessage();
     resetGame(); // Add this line to reset the game state
 }
@@ -740,7 +889,17 @@ ctx.save();
 ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
 ctx.rotate(bird.rotation);
 
-if (currentCharacterIndex === 0) {
+// Determine which image to use based on velocity
+let imageToDraw;
+if (bird.velocity < -1) {
+    imageToDraw = crumpImgUp;
+} else if (bird.velocity > 1) {
+    imageToDraw = crumpImgDown;
+} else {
+    imageToDraw = currentCrumpImg;
+}
+
+if (currentCharacterIndex === 'crump0') {
     // Adjust these values for crump0
     const scaleX = 3.75;  // Increase scale if crump0 is too small
     const scaleY = 3.75;
@@ -748,7 +907,7 @@ if (currentCharacterIndex === 0) {
     const offsetY = -bird.height * 0.125; // Adjust to center vertically
     
     ctx.drawImage(
-        currentCrumpImg,
+        imageToDraw,
         0, 0, 200, 200,  // Source rectangle (full image)
         -bird.width / 2 + offsetX, -bird.height / 2 + offsetY, 
         bird.width * scaleX, bird.height * scaleY  // Scaled size for crump0
@@ -756,13 +915,13 @@ if (currentCharacterIndex === 0) {
 } else {
     // Original drawing for other characters
     ctx.drawImage(
-        currentCrumpImg,
+        imageToDraw,
         0, 0, 200, 200,  // Source rectangle (full image)
         -bird.width / 2, -bird.height / 2, bird.width, bird.height  // Destination rectangle (scaled)
     );
 }
 
-ctx.restore(); // This should be at the end of any transformations you've made
+ctx.restore();
 
 // Draw score
 drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
