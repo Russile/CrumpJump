@@ -189,6 +189,21 @@ function handlePointerEvent(event) {
     
     tapX = (tapX - rect.left) * scaleX;
     tapY = (tapY - rect.top) * scaleY;
+   
+    // Check if instructions are showing
+    if (showingInstructions) {
+        showingInstructions = false;
+        console.log('Instructions hidden');
+        draw(); // Force an immediate redraw
+        return; // Exit the function to prevent other clicks
+    }
+    
+    // Check if the question mark was clicked (do this check first)
+    if (isQuestionMarkClicked(tapX, tapY)) {
+        showingInstructions = !showingInstructions;
+        console.log(`Toggled instructions: ${showingInstructions}`); // Debug log
+        return;
+    }
 
     // Check for logo clicks on the start screen
     if (!gameStarted) {
@@ -532,6 +547,7 @@ function resetAllVariables() {
     console.log('All variables reset');
     // You can add a visual feedback here, like a flash or a message
     showResetMessage();
+    resetGame(); // Add this line to reset the game state
 }
 
 // Add this function to show a reset message
@@ -562,6 +578,125 @@ function showResetMessage() {
     }, 2000);
 }
 
+// Add these variables near the top of your file with other game variables
+let showingInstructions = false;
+const INSTRUCTION_TEXT = "25 points to unlock Hard Mode.\nHard Mode: Start at 20% max speed, gap sizes decreased.";
+
+// Add this function to draw the yellow "?" symbol
+function drawQuestionMark() {
+    const size = 40;
+    const x = gameWidth - size - 10;
+    const y = 10;
+    
+    ctx.fillStyle = 'black';
+    ctx.beginPath();
+    ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'yellow';
+    ctx.font = `bold ${size}px ${GAME_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', x + size/2, y + size/2);
+}
+
+// Add this function to check if the question mark was clicked
+function isQuestionMarkClicked(tapX, tapY) {
+    const size = 50;
+    const x = gameWidth - size - 10;
+    const y = 10;
+    
+    const centerX = x + size/2;
+    const centerY = y + size/2;
+    const radius = size/2;
+    
+    const distance = Math.sqrt((tapX - centerX) ** 2 + (tapY - centerY) ** 2);
+    const clicked = distance <= radius;
+    
+    console.log(`Question mark clicked: ${clicked}. Tap coordinates: (${tapX}, ${tapY})`);
+    
+    return clicked;
+}
+
+// Helper function to wrap text and return an array of lines
+function wrapText(context, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = words[0];
+
+    for (let i = 1; i < words.length; i++) {
+        const word = words[i];
+        const width = context.measureText(currentLine + " " + word).width;
+        if (width < maxWidth) {
+            currentLine += " " + word;
+        } else {
+            lines.push(currentLine);
+            currentLine = word;
+        }
+    }
+    lines.push(currentLine);
+    return lines;
+}
+
+function drawInstructionsPopup() {
+    const padding = 20;
+    const borderRadius = 10;
+    const maxWidth = gameWidth * 0.8;
+    const lineHeight = 30;
+
+    // Measure text to determine box size
+    ctx.font = `20px ${GAME_FONT}`;
+    const paragraphs = INSTRUCTION_TEXT.split('\n');
+    let totalHeight = 0;
+    let maxTextWidth = 0;
+
+    paragraphs.forEach(paragraph => {
+        const lines = wrapText(ctx, paragraph, maxWidth);
+        totalHeight += lines.length * lineHeight;
+        lines.forEach(line => {
+            const lineWidth = ctx.measureText(line).width;
+            if (lineWidth > maxTextWidth) maxTextWidth = lineWidth;
+        });
+        totalHeight += lineHeight; // Space between paragraphs
+    });
+
+    // Calculate box dimensions
+    const boxWidth = Math.min(maxTextWidth + padding * 2, maxWidth);
+    const boxHeight = totalHeight + padding * 2;
+    const boxX = (gameWidth - boxWidth) / 2;
+    const boxY = (gameHeight - boxHeight) / 2;
+
+    // Draw semi-transparent background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+    // Draw box
+    ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, borderRadius);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw text
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    let currentY = boxY + padding;
+    paragraphs.forEach(paragraph => {
+        const lines = wrapText(ctx, paragraph, maxWidth);
+        lines.forEach(line => {
+            ctx.fillText(line, boxX + padding, currentY);
+            currentY += lineHeight;
+        });
+        currentY += lineHeight; // Space between paragraphs
+    });
+
+    console.log('Drawing instructions popup'); // Debug log
+}
+
 // Modify the draw function to include the developer mode features
 function draw() {
     ctx.clearRect(0, 0, gameWidth, gameHeight);
@@ -571,15 +706,13 @@ function draw() {
     ctx.drawImage(backgroundImg, Math.floor(backgroundX) + backgroundImg.width - 1, 0);
 
     if (!gameStarted) {
+        console.log('Drawing start screen'); // Debug log
         // Draw start screen
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, gameWidth, gameHeight);
 
-        // Draw title logo image
-        // ... (rest of the logo drawing code) ...
-
-        // Draw mode buttons
-        // ... (rest of the mode button drawing code) ...
+        // Draw the question mark
+        drawQuestionMark();
 
         // Draw debug mode indicator and "Reset All" button if debug mode is active
         if (debugMode) {
@@ -629,17 +762,27 @@ if (currentCharacterIndex === 0) {
     );
 }
 
-ctx.restore();
+ctx.restore(); // This should be at the end of any transformations you've made
 
-    // Draw score
-    drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
+// Draw score
+drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
 
-    // Draw high score
-    const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
-    drawTextWithOutline(`High Score: ${currentHighScore}`, 10, 48, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
+// Draw high score
+const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
+drawTextWithOutline(`High Score: ${currentHighScore}`, 10, 48, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
 
-    // Draw debug information on top of everything else
-    drawDebugInfo();
+// Draw debug information on top of everything else
+drawDebugInfo();
+
+// Always draw the question mark on top
+drawQuestionMark();
+
+if (showingInstructions) {
+    drawInstructionsPopup();
+}
+
+// Debug log
+console.log(`Drawing question mark at: ${gameWidth - 60} 10`);
 }
 
 // Add this function to draw buttons
@@ -833,7 +976,7 @@ function draw() {
         // Draw start screen
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, gameWidth, gameHeight);
-
+        
         // Draw title logo image
         const logoAspectRatio = 640 / 428; // width / height
         const maxLogoWidth = gameWidth * 0.8; // 80% of game width
@@ -888,7 +1031,13 @@ function draw() {
             const resetButtonY = 10;
             drawButton(resetButtonX, resetButtonY, resetButtonWidth, resetButtonHeight, 'Reset All', '#FF4136', 'white', '16px');
         }
+         // Draw the question mark
+         drawQuestionMark();
 
+         if (showingInstructions) {
+            drawInstructionsPopup();
+        }
+        
         return;  // Don't draw anything else
     }
 
@@ -1025,7 +1174,7 @@ function draw() {
         // Move Score and High Score up
         drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
         drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
-
+        drawQuestionMark();
 
         if (Date.now() - gameOverTime < GAME_OVER_DELAY) {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
@@ -1060,6 +1209,10 @@ function draw() {
         ctx.textBaseline = 'alphabetic';
     }
 
+    // Always check if instructions should be shown last
+    if (showingInstructions) {
+        drawInstructionsPopup();
+    }
     // Draw debug information on top of everything else
     drawDebugInfo();
 }
