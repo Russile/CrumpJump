@@ -12,7 +12,8 @@ const characterNames = {
     crump1: 'CRUMP',
     crump2: 'STASH',
     crump3: 'GOOGINI',
-    crump4: "BEAR"
+    crump4: "BEAR",
+    crump5: "MORTY"
     // Add more character names as needed
 };
 // Add this new array to store character images
@@ -21,9 +22,10 @@ const characterImages = [];
 // Define unlock conditions
 const unlockConditions = {
     crump0: { mode: 'Hard', score: 20 },
-    crump2: { mode: 'Normal', score: 30 },
-    crump3: { mode: 'Normal', score: 40 },
-    crump4: { mode: 'Normal', score: 50 }
+    crump2: { mode: 'Normal', score: 20 },
+    crump3: { mode: 'Normal', score: 30 },
+    crump4: { mode: 'Normal', score: 40 },
+    crump5: { mode: 'Normal', score: 50 }
     // Add more characters and their unlock conditions here
 };
 
@@ -41,7 +43,7 @@ let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
 function getCharacterFolders() {
-    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4'
+    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5'
     ]; 
 }
 
