@@ -63,6 +63,27 @@ function switchCharacter(direction) {
     updateCharacterImages();
 }
 
+let showingUnlockNotification = false;
+let unlockNotificationText = '';
+let unlockNotificationTimer = null;
+
+function showUnlockNotification(characterName) {
+    showingUnlockNotification = true;
+    unlockNotificationText = `${characterName} Unlocked!`;
+    
+    // Clear any existing timer
+    if (unlockNotificationTimer) {
+        clearTimeout(unlockNotificationTimer);
+    }
+    
+    // Set a timer to hide the notification after 3 seconds
+    unlockNotificationTimer = setTimeout(() => {
+        showingUnlockNotification = false;
+        unlockNotificationTimer = null;
+    }, 3000);
+}
+
+
 // Make sure to call this when your game initializes
 function initGame() {
     initializeCharacters();
@@ -600,11 +621,33 @@ function checkCharacterUnlocks() {
             const relevantScore = condition.mode === 'Hard' ? hardModeHighScore : normalModeHighScore;
             if (relevantScore >= condition.score) {
                 unlockedCharacters[character] = true;
-                showUnlockMessage(character);
+                showUnlockNotification(characterNames[character]);
+                saveUnlockedCharacters();
             }
         }
     });
-    saveUnlockedCharacters();
+}
+
+function drawUnlockNotification() {
+    if (showingUnlockNotification) {
+        ctx.font = `16px ${GAME_FONT}`;
+        const textWidth = ctx.measureText(unlockNotificationText).width;
+        const padding = 20;
+        const boxWidth = textWidth + padding * 2;
+        const boxHeight = 40;
+        const boxX = (gameWidth - boxWidth) / 2; // Center horizontally
+        const boxY = 10; // 10px from top
+
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        
+        // Draw text
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(unlockNotificationText, gameWidth / 2, boxY + boxHeight / 2);
+    }
 }
 
 function saveUnlockedCharacters() {
@@ -1253,6 +1296,8 @@ function draw() {
             pipe.x, pipe.bottomY, pipeWidth, gameHeight - pipe.bottomY // destination rectangle
         );
     });
+
+    drawUnlockNotification();
 
     // Draw score - align left
     drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
