@@ -11,7 +11,8 @@ const characterNames = {
     crump0: 'CRUMPLESTILTSKIN',
     crump1: 'CRUMP',
     crump2: 'STASH',
-    crump3: 'GOOGINI'
+    crump3: 'GOOGINI',
+    crump4: "BEAR"
     // Add more character names as needed
 };
 // Add this new array to store character images
@@ -21,7 +22,8 @@ const characterImages = [];
 const unlockConditions = {
     crump0: { mode: 'Hard', score: 20 },
     crump2: { mode: 'Normal', score: 30 },
-    crump3: { mode: 'Normal', score: 50 }
+    crump3: { mode: 'Normal', score: 40 },
+    crump4: { mode: 'Normal', score: 50 }
     // Add more characters and their unlock conditions here
 };
 
@@ -39,7 +41,7 @@ let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
 function getCharacterFolders() {
-    return ['crump0', 'crump1', 'crump2', 'crump3'
+    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4'
     ]; 
 }
 
@@ -90,7 +92,7 @@ let unlockNotificationTimer = null;
 
 function showUnlockNotification(characterName) {
     showingUnlockNotification = true;
-    unlockNotificationText = `${characterName} Unlocked!`;
+    unlockNotificationText = `${characterName} UNLOCKED!`;
     
     // Clear any existing timer
     if (unlockNotificationTimer) {
@@ -187,7 +189,7 @@ const BOOST_THRESHOLD = 300; // Adjust this value as needed (in milliseconds)
 let lastFlapDirection = 0; // 0 for neutral, -1 for up, 1 for down
 let flapDownFrames = 0;
 let flapTransitionFrames = 0;
-const FLAP_DOWN_DURATION = 9; 
+const FLAP_DOWN_DURATION = 3; 
 const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
 
 // Call this when your game starts
@@ -865,7 +867,7 @@ function showResetMessage() {
 
 // Add these variables near the top of your file with other game variables
 let showingInstructions = false;
-const INSTRUCTION_TEXT = "Tap to Jump\nQuick Tap to Boost\n\nHard Mode:\nScore 25 Points to Unlock\n +20% Start Speed\n -10% Gap Size";
+const INSTRUCTION_TEXT = "Tap to Jump\nQuick Tap to Boost\n\nHard Mode:\nScore 25 Points to Unlock\n +20% Start Speed\n -20% Gap Size";
 
 // Add this function to draw the yellow "?" symbol
 function drawQuestionMark() {
@@ -1136,19 +1138,30 @@ function update() {
         }
     }
 
-    // Bird animation
+    // Update flap animation
     if (flapDownFrames > 0) {
         flapDownFrames--;
-        currentCrumpImg = crumpImgDown;
+        imageToDraw = crumpImgDown;
     } else if (flapTransitionFrames > 0) {
         flapTransitionFrames--;
-        currentCrumpImg = characterImages[currentCharacterIndex].neutral;
+        imageToDraw = currentCrumpImg; // Use neutral image during transition
     } else {
-        if (bird.velocity >= 0) {
-            currentCrumpImg = crumpImgUp;
+        // Determine which image to use based on velocity
+        if (bird.velocity < -1) {
+            imageToDraw = crumpImgUp;
+            lastFlapDirection = -1;
+        } else if (bird.velocity > 1) {
+            imageToDraw = crumpImgDown;
+            lastFlapDirection = 1;
         } else {
-            currentCrumpImg = characterImages[currentCharacterIndex].neutral;
+            imageToDraw = currentCrumpImg;
+            lastFlapDirection = 0;
         }
+    }
+
+    // If we just finished the down frames, start the transition
+    if (flapDownFrames === 0 && flapTransitionFrames === 0) {
+        flapTransitionFrames = FLAP_TRANSITION_DURATION;
     }
 
     // Bird rotation
