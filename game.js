@@ -224,20 +224,31 @@ function showLeaderboard() {
     fetchLeaderboard(mode);
 }
 
+function sanitizeInput(input) {
+    // Remove any HTML tags and trim whitespace
+    return input.replace(/(<([^>]+)>)/gi, "").trim();
+}
 
 async function submitScore(score, mode) {
     try {
-        // First, fetch the current leaderboard
         const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const leaderboard = await response.json();
 
-        // Check if the current score is in the top 10
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
-            const playerName = prompt("Congratulations! You made the leaderboard. Enter your name:", "Player");
+            let playerName = prompt("Congratulations! You made the leaderboard. Enter your name (max 15 characters):", "Player");
+            
             if (playerName) {
+                // Sanitize and limit the input
+                playerName = sanitizeInput(playerName).substring(0, 15);
+                
+                if (playerName.length === 0) {
+                    alert("Invalid name. Please try again.");
+                    return;
+                }
+
                 const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -248,7 +259,6 @@ async function submitScore(score, mode) {
                 }
                 const data = await submitResponse.json();
                 console.log(data.message);
-                alert("Score submitted successfully!");
             }
         } else {
             console.log("Score not high enough for leaderboard.");
