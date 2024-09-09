@@ -231,13 +231,19 @@ function drawCharacterSelection(x, y, width, height) {
         const img = characterImages[currentCharacterIndex].up;
         if (img.complete) {
             // Calculate scaling to fit the image within the given dimensions
-            const scale = Math.min(width / img.width, height / img.height);
+            let scale = Math.min(width / img.width, height / img.height);
+            
+            // Apply a smaller scale factor for crump0
+            if (currentCharacterIndex === 'crump0') {
+                scale *= 0.75; // Adjust this value to make crump0 smaller or larger
+            }
+            
             const scaledWidth = img.width * scale;
             const scaledHeight = img.height * scale;
             const offsetX = (width - scaledWidth) / 2;
             const offsetY = (height - scaledHeight) / 2;
 
-            ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
+            ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight)
         } else {
             // Draw placeholder if image is not loaded
             ctx.fillStyle = 'gray';
@@ -258,17 +264,6 @@ function drawCharacterSelection(x, y, width, height) {
         ctx.fillText('🔒', x + width / 2, y + height / 2);
     }
 
-    if (!unlockedCharacters[currentCharacterIndex]) {
-        // Draw semi-transparent overlay and lock icon for locked characters
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(x, y, width, height);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = `${width * 0.5}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🔒', x + width / 2, y + height / 2);
-    }
 
     // Draw arrow buttons
     const arrowWidth = 30;
@@ -356,7 +351,7 @@ function handlePointerEvent(event) {
     // Check if instructions are showing
     if (showingInstructions) {
         showingInstructions = false;
-        console.log('Instructions hidden');
+        //console.log('Instructions hidden');
         draw(); // Force an immediate redraw
         return; // Exit the function to prevent other clicks
     }
@@ -364,7 +359,7 @@ function handlePointerEvent(event) {
     // Check if the question mark was clicked (do this check first)
     if (isQuestionMarkClicked(tapX, tapY)) {
         showingInstructions = !showingInstructions;
-        console.log(`Toggled instructions: ${showingInstructions}`); // Debug log
+        //console.log(`Toggled instructions: ${showingInstructions}`); // Debug log
         draw(); // Force an immediate redraw
         return;
     }
@@ -903,7 +898,7 @@ function isQuestionMarkClicked(tapX, tapY) {
     const distance = Math.sqrt((tapX - centerX) ** 2 + (tapY - centerY) ** 2);
     const clicked = distance <= radius;
     
-    console.log(`Question mark clicked: ${clicked}. Tap coordinates: (${tapX}, ${tapY})`);
+    //console.log(`Question mark clicked: ${clicked}. Tap coordinates: (${tapX}, ${tapY})`);
     
     return clicked;
 }
@@ -1075,7 +1070,7 @@ if (showingInstructions) {
 }
 
 // Debug log
-console.log(`Drawing question mark at: ${gameWidth - 60} 10`);
+//console.log(`Drawing question mark at: ${gameWidth - 60} 10`);
 }
 
 // Add this function to draw buttons
