@@ -117,7 +117,19 @@ function switchCharacter(direction) {
 
 function drawCharacterSelection(x, y, width, height) {
     // Draw character
-    ctx.drawImage(characterImages[currentCharacterIndex].up, x, y, width, height);
+    if (currentCharacterIndex === 0) {
+        // Smaller scale for crump0
+        const scaleX = 0.8;
+        const scaleY = 0.8;
+        const scaledWidth = width * scaleX;
+        const scaledHeight = height * scaleY;
+        const offsetX = (width - scaledWidth) / 2;
+        const offsetY = (height - scaledHeight) / 2;
+        ctx.drawImage(characterImages[currentCharacterIndex].up, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
+    } else {
+        // Original scale for other characters
+        ctx.drawImage(characterImages[currentCharacterIndex].up, x, y, width, height);
+    }
 
     // Draw arrow buttons
     const arrowWidth = 30;
@@ -237,7 +249,7 @@ function handlePointerEvent(event) {
         jump();
     }
 
-    if (debugMode && !gameStarted) {
+    if (debugMode) {
         const resetButtonWidth = 100;
         const resetButtonHeight = 40;
         const resetButtonX = gameWidth - resetButtonWidth - 10;
