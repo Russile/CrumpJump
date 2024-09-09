@@ -186,6 +186,8 @@ const MAX_BOOST_LEVEL = 2; // 0, 1, 2 (three levels total)
 const BASE_BOOST_MULTIPLIER = 1.35;
 const BOOST_INCREMENT = 0.2;
 const BOOST_THRESHOLD = 300; // Adjust this value as needed (in milliseconds)
+const trailPositions = [];
+const MAX_TRAIL_LENGTH = 7;
 
 // Flap animation variables
 let lastFlapDirection = 0; // 0 for neutral, -1 for up, 1 for down
@@ -306,7 +308,44 @@ function drawCharacterSelection(x, y, width, height) {
     }
 }
 
+function updateTrailPositions() {
+    if (boosting) {
+        // Calculate the center of the bird
+        const centerX = bird.x + bird.width / 2;
+        const centerY = bird.y + bird.height / 2;
+        
+        // Add a slight offset to position the trail behind the bird
+        const trailOffsetX = 0; // Adjust this value as needed
+        const trailOffsetY = 15;  // Adjust this value as needed
+        
+        trailPositions.unshift({ 
+            x: centerX + trailOffsetX, 
+            y: centerY + trailOffsetY 
+        });
+        
+        if (trailPositions.length > MAX_TRAIL_LENGTH) {
+            trailPositions.pop();
+        }
+    } else {
+        trailPositions.length = 0; // Clear the trail when not boosting
+    }
+}
 
+function drawBoostTrail() {
+    if (trailPositions.length > 1) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 15;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(trailPositions[0].x, trailPositions[0].y);
+        for (let i = 1; i < trailPositions.length; i++) {
+            ctx.lineTo(trailPositions[i].x, trailPositions[i].y);
+            ctx.globalAlpha = 1 - (i / trailPositions.length); // Fade out the trail
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1; // Reset global alpha
+    }
+}
 
 function switchCharacter(direction) {
     const characterFolders = getCharacterFolders();
@@ -1131,6 +1170,9 @@ function update() {
         bird.velocity = 0; // Stop upward movement
     }
 
+    // Update trail positions
+    updateTrailPositions();
+
     // If boosting, reduce the effect of gravity
     if (boosting) {
         bird.velocity *= 0.95; // Reduce velocity decay while boosting
@@ -1343,6 +1385,10 @@ function draw() {
         
         return;  // Don't draw anything else
     }
+
+
+    // Draw boost trail
+    drawBoostTrail();
 
     // Draw bird with rotation and current image
     ctx.save();
