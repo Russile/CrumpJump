@@ -232,6 +232,8 @@ function sanitizeInput(input) {
 }
 
 async function submitScore(score, mode) {
+    if (score <= 1) return; // Don't submit scores of 1 or less
+
     try {
         const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
         if (!response.ok) {
@@ -239,22 +241,30 @@ async function submitScore(score, mode) {
         }
         const leaderboard = await response.json();
 
+        let playerName = "noHighScore";
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
-            const playerName = await showNameInputModal();
-            if (playerName) {
-                const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerName, score, mode })
-                });
-                if (!submitResponse.ok) {
-                    throw new Error(`HTTP error! status: ${submitResponse.status}`);
-                }
-                const data = await submitResponse.json();
-                console.log(data.message);
-            }
-        } else {
-            console.log("Score not high enough for leaderboard.");
+            playerName = await showNameInputModal();
+            if (!playerName) return; // If the player cancels the name input, don't submit the score
+        }
+
+        const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                playerName, 
+                score, 
+                mode,
+                character: currentCharacterIndex // Add this line
+            })
+        });
+        if (!submitResponse.ok) {
+            throw new Error(`HTTP error! status: ${submitResponse.status}`);
+        }
+        const data = await submitResponse.json();
+        console.log(data.message);
+
+        if (playerName === "noHighScore") {
+            console.log("Score submitted but not high enough for leaderboard.");
         }
     } catch (error) {
         console.error('Error submitting score:', error);
@@ -356,7 +366,7 @@ function displayLeaderboard(leaderboardData) {
     }
 
     // Draw a semi-transparent background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     // Draw leaderboard title with mode
@@ -368,10 +378,17 @@ function displayLeaderboard(leaderboardData) {
     leaderboardData.forEach((entry, index) => {
         const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
         drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        
+        // Draw character image, defaulting to 'crump1' if no character info
+        const characterKey = entry.character || 'crump1';
+        if (characterImages[characterKey]) {
+            const img = characterImages[characterKey].up;
+            const imgSize = 30; // Adjust this value as needed
+            ctx.drawImage(img, gameWidth / 2 - 150, yPos - imgSize / 2, imgSize, imgSize);
+        }
+        
         yPos += 40;
     });
-
-    // We've removed the instruction to tap anywhere to close
 }
 
 function drawCharacterSelection(x, y, width, height) {
