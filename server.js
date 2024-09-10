@@ -10,10 +10,14 @@ app.use(express.json());
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 
+let collection; // Declare the collection variable
+
 async function connectToDatabase() {
   try {
     await client.connect();
     console.log('Connected to MongoDB');
+    const database = client.db('crumpjump'); 
+    collection = database.collection('scores'); // Initialize the collection
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
   }
