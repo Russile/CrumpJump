@@ -1860,12 +1860,46 @@ function showCursor() {
     document.getElementById('gameCanvas').classList.add('game-over');
 }
 
-// Add these event listeners at the end of your file
+// Event listeners for mouse and touch events
 canvas.addEventListener('mousemove', function() {
     if (gameStarted && !gameOver) {
         hideCursor();
     }
 });
+
+// Event listeners for off-screen clicks and touches (Hello Rohan!)
+document.addEventListener('click', function(event) {
+    // Ignore clicks if a modal is open
+    if (isModalOpen) return;
+
+    // Only handle clicks when the game is in progress
+    if (gameStarted && !gameOver) {
+        // Check if the click is outside the canvas
+        const rect = canvas.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right ||
+            event.clientY < rect.top || event.clientY > rect.bottom) {
+            jump();
+            event.preventDefault(); // Prevent any default behavior
+        }
+    }
+});
+
+document.addEventListener('touchstart', function(event) {
+    // Ignore touches if a modal is open
+    if (isModalOpen) return;
+
+    // Only handle touches when the game is in progress
+    if (gameStarted && !gameOver) {
+        // Check if the touch is outside the canvas
+        const rect = canvas.getBoundingClientRect();
+        const touch = event.touches[0];
+        if (touch.clientX < rect.left || touch.clientX > rect.right ||
+            touch.clientY < rect.top || touch.clientY > rect.bottom) {
+            jump();
+            event.preventDefault(); // Prevent any default behavior
+        }
+    }
+}, { passive: false });
 
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden && gameStarted && !gameOver) {
