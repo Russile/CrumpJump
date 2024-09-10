@@ -170,6 +170,7 @@ let hardModeHighScore = parseInt(localStorage.getItem('hardModeHighScore')) || 0
 let gameOver = false;
 let gameStarted = false;
 let debugMode = false;
+let debugModeActivated = false;
 let pipesPassed = 0;
 let backgroundSpeed = 1;
 let pipeSpeed = 2;
@@ -232,7 +233,10 @@ function sanitizeInput(input) {
 }
 
 async function submitScore(score, mode) {
-    if (score <= 1) return; // Don't submit scores of 1 or less
+    if (score <= 1 || debugModeActivated) {
+        console.log("Score not submitted: Too low or debug mode was used");
+        return;
+    }
 
     try {
         const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
@@ -698,6 +702,7 @@ function handlePointerEvent(event) {
         currentLeaderboardData = null;
         currentLeaderboardMode = '';
         draw(); // Redraw the game screen
+        showCursor();
         return;
     }
 }
@@ -848,6 +853,7 @@ function resetGame(startInHardMode = false) {
     backgroundSpeed = INITIAL_BACKGROUND_SPEED;
     pipeSpeed = INITIAL_PIPE_SPEED;
     testMode = false;
+    debugModeActivated = false;
     lastFlapDirection = 0;
     flapDownFrames = 0;
     flapTransitionFrames = 0;
@@ -1360,6 +1366,7 @@ function drawButton(x, y, width, height, text, fillColor, textColor, fontSize = 
 // Add this function to toggle debug mode
 function toggleDebugMode() {
     debugMode = !debugMode;
+    debugModeActivated = true;
     console.log(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
     
     if (debugMode) {
