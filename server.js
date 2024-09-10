@@ -25,7 +25,7 @@ connectToDatabase();
 app.post('/api/scores', async (req, res) => {
   try {
     const { playerName, score, mode } = req.body;
-    const collection = client.db('flappybird').collection('scores');
+    const collection = client.db('crumpjump').collection('scores');
     await collection.insertOne({ playerName, score, mode, timestamp: new Date() });
     res.status(201).json({ message: 'Score submitted successfully' });
   } catch (error) {
@@ -37,7 +37,7 @@ app.post('/api/scores', async (req, res) => {
 app.get('/api/leaderboard/:mode', async (req, res) => {
   try {
     const { mode } = req.params;
-    const collection = client.db('flappybird').collection('scores');
+    const collection = client.db('crumpjump').collection('scores');
     const leaderboard = await collection.find({ mode })
       .sort({ score: -1 })
       .limit(10)
