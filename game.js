@@ -13,7 +13,8 @@ const characterNames = {
     crump2: 'STASH',
     crump3: 'GOOGINI',
     crump4: "BEAR",
-    crump5: "MORTY"
+    crump5: "MORTY",
+    crump6: "XK"
     // Add more character names as needed
 };
 // Add this new array to store character images
@@ -25,7 +26,8 @@ const unlockConditions = {
     crump2: { mode: 'Normal', score: 20 },
     crump3: { mode: 'Normal', score: 30 },
     crump4: { mode: 'Normal', score: 40 },
-    crump5: { mode: 'Normal', score: 50 }
+    crump5: { mode: 'Normal', score: 50 },
+    crump6: { mode: 'Hard', score: 10 }
     // Add more characters and their unlock conditions here
 };
 
@@ -43,7 +45,7 @@ let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
 function getCharacterFolders() {
-    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5'
+    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5', 'crump6'
     ]; 
 }
 
@@ -257,6 +259,9 @@ async function submitScore(score, mode) {
     } catch (error) {
         console.error('Error submitting score:', error);
         alert("Failed to submit score. Please try again.");
+    } finally {
+        showCursor();
+        gameOverHandled = true;
     }
 }
 
@@ -264,33 +269,62 @@ let isModalOpen = false;
 function showNameInputModal() {
     return new Promise((resolve) => {
         const modal = document.getElementById('nameModal');
+        const modalContent = modal.querySelector('.modal-content');
         const input = document.getElementById('playerNameInput');
         const submitButton = document.getElementById('submitName');
 
         modal.style.display = 'block';
         input.focus();
         isModalOpen = true;
+        showCursor();  // Show cursor when modal is open
 
         submitButton.onclick = () => {
             const playerName = sanitizeInput(input.value);
             if (playerName.length > 0) {
-                modal.style.display = 'none';
-                isModalOpen = false;
+                closeModal();
                 resolve(playerName);
             } else {
                 alert("Please enter a valid name.");
             }
         };
 
-        // Allow closing the modal by clicking outside
+        // Prevent any clicks outside the modal content from doing anything
         modal.onclick = (event) => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-                isModalOpen = false;
-                resolve(null);
-            }
+            event.stopPropagation();
         };
+
+        // Prevent closing when clicking inside the modal content
+        modalContent.onclick = (event) => {
+            event.stopPropagation();
+        };
+
+        // Disable keyboard events that might interfere
+        document.addEventListener('keydown', preventDefaultForModal);
     });
+}
+
+function preventDefaultForModal(event) {
+    if (isModalOpen) {
+        // Allow letters, numbers, backspace, enter, and space
+        if (!/^[a-zA-Z0-9]$/.test(event.key) && 
+            event.key !== 'Backspace' && 
+            event.key !== 'Enter' &&
+            event.key !== ' ') {
+            event.preventDefault();
+        }
+        // Prevent space from scrolling the page
+        if (event.key === ' ' && event.target !== document.getElementById('playerNameInput')) {
+            event.preventDefault();
+        }
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('nameModal');
+    modal.style.display = 'none';
+    isModalOpen = false;
+    document.removeEventListener('keydown', preventDefaultForModal);
+    showCursor();  // Ensure cursor is visible after closing modal
 }
   
 async function fetchLeaderboard(mode) {
@@ -476,8 +510,9 @@ function isTapWithinButton(x, y, buttonX, buttonY, buttonWidth, buttonHeight) {
 
 // Add this function to handle both mouse clicks and touch events
 function handlePointerEvent(event) {
-    event.preventDefault();
     if (isModalOpen) return;  // Ignore input if modal is open
+    event.preventDefault();
+
 
     let tapX, tapY;
     
@@ -883,6 +918,7 @@ function handleGameOver() {
         gameOverTime = Date.now();
         gameOverHandled = true;
         updateHighScore();
+        showCursor();  // Show the cursor when the game is over
         submitScore(score, hardModeActive ? 'Hard' : 'Normal');
     }
 }
@@ -1466,6 +1502,14 @@ function update() {
 }
 
 function gameLoop(currentTime) {
+    if (!isModalOpen) {
+    // Update game state at a fixed time step
+    while (currentTime - lastUpdateTime >= FIXED_DELTA_TIME * 1000) {
+        update();
+        lastUpdateTime += FIXED_DELTA_TIME * 1000;
+    }
+        draw();
+    }
     requestAnimationFrame(gameLoop);
 
     // Update game state at a fixed time step
@@ -1474,8 +1518,6 @@ function gameLoop(currentTime) {
         lastUpdateTime += FIXED_DELTA_TIME * 1000;
     }
 
-    // Render as often as possible
-    draw();
 }
 
 // Load title logo image
