@@ -24,27 +24,33 @@ connectToDatabase();
 // Submit score
 app.post('/api/scores', async (req, res) => {
   try {
-    const { playerName, score, mode } = req.body;
-    const collection = client.db('crumpjump').collection('scores');
-    await collection.insertOne({ playerName, score, mode, timestamp: new Date() });
-    res.status(201).json({ message: 'Score submitted successfully' });
+      const { playerName, score, mode, character } = req.body;
+      
+      if (score > 1) {
+          await collection.insertOne({ playerName, score, mode, character, timestamp: new Date() });
+          res.status(201).json({ message: 'Score submitted successfully' });
+      } else {
+          res.status(400).json({ message: 'Score must be greater than 1' });
+      }
   } catch (error) {
-    res.status(500).json({ message: 'Error submitting score' });
+      console.error('Error submitting score:', error);
+      res.status(500).json({ message: 'Error submitting score' });
   }
 });
 
 // Get leaderboard
 app.get('/api/leaderboard/:mode', async (req, res) => {
   try {
-    const { mode } = req.params;
-    const collection = client.db('crumpjump').collection('scores');
-    const leaderboard = await collection.find({ mode })
-      .sort({ score: -1 })
-      .limit(10)
-      .toArray();
-    res.json(leaderboard);
+      const { mode } = req.params;
+      const leaderboard = await collection.find({ mode })
+          .sort({ score: -1 })
+          .limit(10)
+          .project({ playerName: 1, score: 1, character: 1, _id: 0 })
+          .toArray();
+      res.json(leaderboard);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching leaderboard' });
+      console.error('Error fetching leaderboard:', error);
+      res.status(500).json({ message: 'Error fetching leaderboard' });
   }
 });
 

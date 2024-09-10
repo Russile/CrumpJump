@@ -13,7 +13,8 @@ const characterNames = {
     crump2: 'STASH',
     crump3: 'GOOGINI',
     crump4: "BEAR",
-    crump5: "MORTY"
+    crump5: "MORTY",
+    crump6: "XK"
     // Add more character names as needed
 };
 // Add this new array to store character images
@@ -25,7 +26,8 @@ const unlockConditions = {
     crump2: { mode: 'Normal', score: 20 },
     crump3: { mode: 'Normal', score: 30 },
     crump4: { mode: 'Normal', score: 40 },
-    crump5: { mode: 'Normal', score: 50 }
+    crump5: { mode: 'Normal', score: 50 },
+    crump6: { mode: 'Hard', score: 10 }
     // Add more characters and their unlock conditions here
 };
 
@@ -43,7 +45,7 @@ let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
 function getCharacterFolders() {
-    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5'
+    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5', 'crump6'
     ]; 
 }
 
@@ -224,39 +226,115 @@ function showLeaderboard() {
     fetchLeaderboard(mode);
 }
 
+function sanitizeInput(input) {
+    // Remove any HTML tags and trim whitespace
+    return input.replace(/(<([^>]+)>)/gi, "").trim();
+}
 
 async function submitScore(score, mode) {
+    if (score <= 1) return; // Don't submit scores of 1 or less
+
     try {
-        // First, fetch the current leaderboard
         const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const leaderboard = await response.json();
 
-        // Check if the current score is in the top 10
+        let playerName = "noHighScore";
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
-            const playerName = prompt("Congratulations! You made the leaderboard. Enter your name:", "Player");
-            if (playerName) {
-                const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerName, score, mode })
-                });
-                if (!submitResponse.ok) {
-                    throw new Error(`HTTP error! status: ${submitResponse.status}`);
-                }
-                const data = await submitResponse.json();
-                console.log(data.message);
-                alert("Score submitted successfully!");
-            }
-        } else {
-            console.log("Score not high enough for leaderboard.");
+            playerName = await showNameInputModal();
+            if (!playerName) return; // If the player cancels the name input, don't submit the score
+        }
+
+        const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                playerName, 
+                score, 
+                mode,
+                character: currentCharacterIndex // Add this line
+            })
+        });
+        if (!submitResponse.ok) {
+            throw new Error(`HTTP error! status: ${submitResponse.status}`);
+        }
+        const data = await submitResponse.json();
+        console.log(data.message);
+
+        if (playerName === "noHighScore") {
+            console.log("Score submitted but not high enough for leaderboard.");
         }
     } catch (error) {
         console.error('Error submitting score:', error);
         alert("Failed to submit score. Please try again.");
+    } finally {
+        showCursor();
+        gameOverHandled = true;
     }
+}
+
+let isModalOpen = false;
+function showNameInputModal() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('nameModal');
+        const modalContent = modal.querySelector('.modal-content');
+        const input = document.getElementById('playerNameInput');
+        const submitButton = document.getElementById('submitName');
+
+        modal.style.display = 'block';
+        input.focus();
+        isModalOpen = true;
+        showCursor();  // Show cursor when modal is open
+
+        submitButton.onclick = () => {
+            const playerName = sanitizeInput(input.value);
+            if (playerName.length > 0) {
+                closeModal();
+                resolve(playerName);
+            } else {
+                alert("Please enter a valid name.");
+            }
+        };
+
+        // Prevent any clicks outside the modal content from doing anything
+        modal.onclick = (event) => {
+            event.stopPropagation();
+        };
+
+        // Prevent closing when clicking inside the modal content
+        modalContent.onclick = (event) => {
+            event.stopPropagation();
+        };
+
+        // Disable keyboard events that might interfere
+        document.addEventListener('keydown', preventDefaultForModal);
+    });
+}
+
+function preventDefaultForModal(event) {
+    if (isModalOpen) {
+        // Allow letters, numbers, backspace, enter, and space
+        if (!/^[a-zA-Z0-9]$/.test(event.key) && 
+            event.key !== 'Backspace' && 
+            event.key !== 'Enter' &&
+            event.key !== ' ') {
+            event.preventDefault();
+        }
+        // Prevent space from scrolling the page
+        if (event.key === ' ' && event.target !== document.getElementById('playerNameInput')) {
+            event.preventDefault();
+        }
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('nameModal');
+    modal.style.display = 'none';
+    isModalOpen = false;
+    document.removeEventListener('keydown', preventDefaultForModal);
+    showCursor();  // Ensure cursor is visible after closing modal
 }
   
 async function fetchLeaderboard(mode) {
@@ -288,7 +366,7 @@ function displayLeaderboard(leaderboardData) {
     }
 
     // Draw a semi-transparent background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     // Draw leaderboard title with mode
@@ -300,10 +378,17 @@ function displayLeaderboard(leaderboardData) {
     leaderboardData.forEach((entry, index) => {
         const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
         drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        
+        // Draw character image, defaulting to 'crump1' if no character info
+        const characterKey = entry.character || 'crump1';
+        if (characterImages[characterKey]) {
+            const img = characterImages[characterKey].up;
+            const imgSize = 30; // Adjust this value as needed
+            ctx.drawImage(img, gameWidth / 2 - 150, yPos - imgSize / 2, imgSize, imgSize);
+        }
+        
         yPos += 40;
     });
-
-    // We've removed the instruction to tap anywhere to close
 }
 
 function drawCharacterSelection(x, y, width, height) {
@@ -442,7 +527,9 @@ function isTapWithinButton(x, y, buttonX, buttonY, buttonWidth, buttonHeight) {
 
 // Add this function to handle both mouse clicks and touch events
 function handlePointerEvent(event) {
+    if (isModalOpen) return;  // Ignore input if modal is open
     event.preventDefault();
+
 
     let tapX, tapY;
     
@@ -669,6 +756,8 @@ canvas.addEventListener('mousedown', handlePointerEvent);
 
 // Modify the keydown event listener
 document.addEventListener('keydown', function(event) {
+    if (isModalOpen) return;  // Ignore input if modal is open
+
     if (event.code === 'Space') {
         if (!gameStarted) {
             startGame(false); // Start in Normal Mode
@@ -846,6 +935,7 @@ function handleGameOver() {
         gameOverTime = Date.now();
         gameOverHandled = true;
         updateHighScore();
+        showCursor();  // Show the cursor when the game is over
         submitScore(score, hardModeActive ? 'Hard' : 'Normal');
     }
 }
@@ -1271,10 +1361,12 @@ function toggleDebugMode() {
 }
 
 function update() {
+    if (isModalOpen) return;  // Pause game updates if modal is open
     if (!gameStarted) return;
     if (gameOver) {
         if (!gameOverHandled) {
             console.log("Game over, calling handleGameOver");
+            showCursor();
             handleGameOver();
         }
         return; // Exit the update function immediately if the game is over
@@ -1283,6 +1375,8 @@ function update() {
         hideHardModeUnlockedPopup();
         showCursor();
         return;
+    } else {
+        hideCursor();
     }
 
     frameCount++;
@@ -1425,6 +1519,14 @@ function update() {
 }
 
 function gameLoop(currentTime) {
+    if (!isModalOpen) {
+    // Update game state at a fixed time step
+    while (currentTime - lastUpdateTime >= FIXED_DELTA_TIME * 1000) {
+        update();
+        lastUpdateTime += FIXED_DELTA_TIME * 1000;
+    }
+        draw();
+    }
     requestAnimationFrame(gameLoop);
 
     // Update game state at a fixed time step
@@ -1433,8 +1535,6 @@ function gameLoop(currentTime) {
         lastUpdateTime += FIXED_DELTA_TIME * 1000;
     }
 
-    // Render as often as possible
-    draw();
 }
 
 // Load title logo image
@@ -1767,21 +1867,56 @@ function drawTextWithOutline(text, x, y, fillStyle, strokeStyle, lineWidth, font
     ctx.fillText(text, x, y);
 }
 
-// Add these new functions near the top of your file
 function hideCursor() {
-    canvas.style.cursor = 'none';
+    document.getElementById('gameCanvas').classList.add('playing');
+    document.getElementById('gameCanvas').classList.remove('game-over');
 }
 
 function showCursor() {
-    canvas.style.cursor = 'auto';
+    document.getElementById('gameCanvas').classList.remove('playing');
+    document.getElementById('gameCanvas').classList.add('game-over');
 }
 
-// Add these event listeners at the end of your file
+// Event listeners for mouse and touch events
 canvas.addEventListener('mousemove', function() {
     if (gameStarted && !gameOver) {
         hideCursor();
     }
 });
+
+// Event listeners for off-screen clicks and touches (Hello Rohan!)
+document.addEventListener('click', function(event) {
+    // Ignore clicks if a modal is open
+    if (isModalOpen) return;
+
+    // Only handle clicks when the game is in progress
+    if (gameStarted && !gameOver) {
+        // Check if the click is outside the canvas
+        const rect = canvas.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right ||
+            event.clientY < rect.top || event.clientY > rect.bottom) {
+            jump();
+            event.preventDefault(); // Prevent any default behavior
+        }
+    }
+});
+
+document.addEventListener('touchstart', function(event) {
+    // Ignore touches if a modal is open
+    if (isModalOpen) return;
+
+    // Only handle touches when the game is in progress
+    if (gameStarted && !gameOver) {
+        // Check if the touch is outside the canvas
+        const rect = canvas.getBoundingClientRect();
+        const touch = event.touches[0];
+        if (touch.clientX < rect.left || touch.clientX > rect.right ||
+            touch.clientY < rect.top || touch.clientY > rect.bottom) {
+            jump();
+            event.preventDefault(); // Prevent any default behavior
+        }
+    }
+}, { passive: false });
 
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden && gameStarted && !gameOver) {
