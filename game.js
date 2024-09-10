@@ -360,13 +360,12 @@ async function fetchLeaderboard(mode) {
   
 function displayLeaderboard(leaderboardData) {
     if (!leaderboardData || leaderboardData.length === 0) {
-        // Draw an error message if there's no data
         drawTextWithOutline('No leaderboard data available', gameWidth / 2, gameHeight / 2, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
         return;
     }
 
     // Draw a semi-transparent background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     // Draw leaderboard title with mode
@@ -375,16 +374,29 @@ function displayLeaderboard(leaderboardData) {
 
     // Draw leaderboard entries
     let yPos = 100;
+    const imgSize = 40; // Adjust this value as needed
+    const haloSize = imgSize -7; // Slightly smaller than the image
+    const haloColor = 'rgba(255, 255, 255, 0.2)'; // White with some transparency
+
     leaderboardData.forEach((entry, index) => {
         const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
         drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
         
-        // Draw character image, defaulting to 'crump1' if no character info
+        // Draw character image with halo
         const characterKey = entry.character || 'crump1';
         if (characterImages[characterKey]) {
             const img = characterImages[characterKey].up;
-            const imgSize = 30; // Adjust this value as needed
-            ctx.drawImage(img, gameWidth / 2 - 150, yPos - imgSize / 2, imgSize, imgSize);
+            const imgX = gameWidth / 2 - 150;
+            const imgY = yPos - imgSize / 2;
+
+            // Draw halo
+            ctx.beginPath();
+            ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, haloSize / 2, 0, Math.PI * 2);
+            ctx.fillStyle = haloColor;
+            ctx.fill();
+
+            // Draw character image
+            ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
         }
         
         yPos += 40;
