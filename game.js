@@ -233,7 +233,7 @@ function sanitizeInput(input) {
 }
 
 async function submitScore(score, mode) {
-    if (score < 1 || debugModeActivated) {
+    if (score <= 1 || debugModeActivated) {
         console.log("Score not submitted: Too low or debug mode was used");
         return;
     }
@@ -284,7 +284,7 @@ async function submitScore(score, mode) {
         }
     } catch (error) {
         console.error('Error submitting score:', error);
-        alert("Failed to submit score. Please try again.");
+        alert("Failed to submit score. Please refresh the page and try again.");
     } finally {
         scoreSubmitted = true;
     }
