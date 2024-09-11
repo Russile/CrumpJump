@@ -905,7 +905,7 @@ function createPipe() {
 
 // Modify the checkCollision function to use circular hitbox
 function checkCollision(birdX, birdY, pipeX, pipeTop, pipeBottom) {
-    const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase (0.2 * 1.15)
+    const birdRadius = bird.width * 0.2; // Reduced from 0.23 to improve perceived collisions
     const birdCenterX = birdX + bird.width / 2;
     const birdCenterY = birdY + bird.height / 2;
     const pipeWidth = 50; // Adjust this to match your pipe width
@@ -1405,7 +1405,7 @@ function update() {
     bird.y += bird.velocity;
 
     // Calculate bird's hitbox
-    const birdRadius = bird.width * 0.23; // Adjusted for the 15% increase
+    const birdRadius = bird.width * 0.2; // Reduced from 0.23 to 0.2 
     const birdCenterX = bird.x + bird.width / 2;
     const birdCenterY = bird.y + bird.height / 2;
 
@@ -2049,7 +2049,7 @@ function drawDebugInfo() {
     ctx.lineWidth = 2;
 
     // Bird hit box
-    const birdRadius = bird.width * 0.23;
+    const birdRadius = bird.width * 0.2; // Reduced from 0.23 to 0.2 
     const birdCenterX = bird.x + bird.width / 2;
     const birdCenterY = bird.y + bird.height / 2;
     
