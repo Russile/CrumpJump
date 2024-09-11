@@ -185,9 +185,9 @@ let boosting = false;
 let lastJumpTime = 0;
 let boostLevel = 0;
 const MAX_BOOST_LEVEL = 2; // 0, 1, 2 (three levels total)
-const BASE_BOOST_MULTIPLIER = 1.35;
+const BASE_BOOST_MULTIPLIER = 1.15;
 const BOOST_INCREMENT = 0.2;
-const BOOST_THRESHOLD = 300; // Adjust this value as needed (in milliseconds)
+const BOOST_THRESHOLD = 250; // Adjust this value as needed (in milliseconds)
 const trailPositions = [];
 const MAX_TRAIL_LENGTH = 7;
 
