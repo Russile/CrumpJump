@@ -66,7 +66,6 @@ function initializeCharacters() {
         }
     });
 
-    console.log('Initialized characters:', unlockedCharacters);
 }
 
 function updateCharacterImages() {
