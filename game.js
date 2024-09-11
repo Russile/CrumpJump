@@ -931,11 +931,7 @@ function createPipe() {
     
     // Clamp to ensure we're within screen bounds
     newGapCenter = Math.max(minGapTop + gapHeight / 2, Math.min(newGapCenter, maxGapBottom - gapHeight / 2));
-    
-    // Console output
-    console.log(`  Gap Center: ${newGapCenter.toFixed(2)}`);
-    console.log(`  Difference from last: ${(newGapCenter - lastPipeGapCenter).toFixed(2)}`);
-    
+
     // Update lastPipeGapCenter for next pipe
     lastPipeGapCenter = newGapCenter;
     
