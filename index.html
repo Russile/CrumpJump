@@ -52,34 +52,62 @@
             cursor: default;
         }
 
-        /* Preserve your existing modal styles */
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-        }
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    }
 
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 300px;
-            text-align: center;
-        }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 300px;
+        text-align: center;
+        font-size: 24px; /* Increase the font size */
+        box-sizing: border-box; /* Ensure padding is included in the width */
+    }
 
-        #playerNameInput {
-            width: 100%;
-            padding: 5px;
-            margin: 10px 0;
-        }
-    </style>
+    .modal-title {
+        font-size: 28px; /* Increase the font size */
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .modal-message {
+        font-size: 24px; /* Increase the font size */
+        margin-bottom: 20px;
+    }
+
+    #playerNameInput {
+        font-size: 24px; /* Increase the font size */
+        width: calc(100% - 20px); /* Adjust width to include padding */
+        padding: 10px;
+        margin: 10px 0;
+        box-sizing: border-box; /* Ensure padding is included in the width */
+    }
+
+    #submitName {
+        font-size: 24px; /* Increase the font size */
+        padding: 10px 20px;
+        background-color: #007BFF; /* Change to a more appealing blue color */
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    #submitName:hover {
+        background-color: #0056b3; /* Darker blue on hover */
+    }
+</style>
 </head>
 <body>
     <div id="gameContainer">
@@ -89,9 +117,9 @@
 
     <div id="nameModal" class="modal">
         <div class="modal-content">
-            <h2>Congratulations!</h2>
-            <p>You made the leaderboard. Enter your name:</p>
-            <input type="text" id="playerNameInput" maxlength="15" autocapitalize="words">
+            <div class="modal-title">Choose Username</div>
+            <div class="modal-message"></div>
+            <input type="text" id="playerNameInput" placeholder="" maxlength="15" spellcheck="false">
             <button id="submitName">Submit</button>
         </div>
     </div>

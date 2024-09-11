@@ -139,6 +139,7 @@ function initGame() {
     updateCharacterImages();
     loadHighScores();
     checkAllCharacterUnlocks();
+    checkFirstTimeUser();
 }
 
 
@@ -202,9 +203,9 @@ let scoreSubmitted = false;
 let showingLeaderboard = false;
 let currentLeaderboardData = null;
 let currentLeaderboardMode = '';
+let isModalOpen = false;
 
-// Call this when your game starts
-initGame();
+
 
 // Load pipe images
 const pipeImgs = [
@@ -232,7 +233,7 @@ function sanitizeInput(input) {
 }
 
 async function submitScore(score, mode) {
-    if (score <= 1 || debugModeActivated) {
+    if (score < 1 || debugModeActivated) {
         console.log("Score not submitted: Too low or debug mode was used");
         return;
     }
@@ -244,10 +245,22 @@ async function submitScore(score, mode) {
         }
         const leaderboard = await response.json();
 
-        let playerName = "noHighScore";
+        let playerName = localStorage.getItem('username') || "";
+        
+        // Check if score is eligible for leaderboard
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
-            playerName = await showNameInputModal();
-            if (!playerName) return; // If the player cancels the name input, don't submit the score
+            // Prompt for name, pre-populated with current username
+            const newName = await showNameInputModal(playerName, 'New High Score!', 'Enter your name for the leaderboard:');
+            if (newName) {
+                playerName = newName;
+                localStorage.setItem('username', playerName); // Update stored username
+            } else {
+                console.log("Name input cancelled, score not submitted");
+                return; // Exit if user cancels name input
+            }
+        } else if (!playerName) {
+            // If not a high score but no username is set, use a default
+            playerName = "Anonymous";
         }
 
         const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
@@ -257,7 +270,7 @@ async function submitScore(score, mode) {
                 playerName, 
                 score, 
                 mode,
-                character: currentCharacterIndex // Add this line
+                character: currentCharacterIndex
             })
         });
         if (!submitResponse.ok) {
@@ -266,33 +279,40 @@ async function submitScore(score, mode) {
         const data = await submitResponse.json();
         console.log(data.message);
 
-        if (playerName === "noHighScore") {
+        if (leaderboard.length >= 10 && score <= leaderboard[leaderboard.length - 1].score) {
             console.log("Score submitted but not high enough for leaderboard.");
         }
     } catch (error) {
         console.error('Error submitting score:', error);
         alert("Failed to submit score. Please try again.");
     } finally {
-        showCursor();
-        gameOverHandled = true;
+        scoreSubmitted = true;
     }
 }
 
-let isModalOpen = false;
-function showNameInputModal() {
+
+
+function showNameInputModal(currentName = '', title = '', message = '') {
     return new Promise((resolve) => {
         const modal = document.getElementById('nameModal');
         const modalContent = modal.querySelector('.modal-content');
+        const modalTitle = modal.querySelector('.modal-title');
+        const modalMessage = modal.querySelector('.modal-message');
         const input = document.getElementById('playerNameInput');
         const submitButton = document.getElementById('submitName');
 
+        // Set the title and message
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+
+        input.value = currentName; // Pre-populate with current name
         modal.style.display = 'block';
         input.focus();
-        isModalOpen = true;
+        isModalOpen = true; // Set to true when modal is open
         showCursor();  // Show cursor when modal is open
 
         submitButton.onclick = () => {
-            const playerName = sanitizeInput(input.value);
+            let playerName = sanitizeInput(input.value);
             if (playerName.length > 0) {
                 closeModal();
                 resolve(playerName);
@@ -301,9 +321,12 @@ function showNameInputModal() {
             }
         };
 
-        // Prevent any clicks outside the modal content from doing anything
+        // Allow closing the modal without submitting
         modal.onclick = (event) => {
-            event.stopPropagation();
+            if (event.target === modal) {
+                closeModal();
+                resolve(null);
+            }
         };
 
         // Prevent closing when clicking inside the modal content
@@ -318,6 +341,9 @@ function showNameInputModal() {
 
 function preventDefaultForModal(event) {
     if (isModalOpen) {
+        // Stop propagation for all key events when modal is open
+        event.stopPropagation();
+
         // Allow letters, numbers, backspace, enter, and space
         if (!/^[a-zA-Z0-9]$/.test(event.key) && 
             event.key !== 'Backspace' && 
@@ -325,8 +351,17 @@ function preventDefaultForModal(event) {
             event.key !== ' ') {
             event.preventDefault();
         }
+        
         // Prevent space from scrolling the page
         if (event.key === ' ' && event.target !== document.getElementById('playerNameInput')) {
+            event.preventDefault();
+        }
+
+        // Prevent default behavior for all keys except those explicitly allowed
+        if (!/^[a-zA-Z0-9]$/.test(event.key) && 
+            event.key !== 'Backspace' && 
+            event.key !== 'Enter' &&
+            event.key !== ' ') {
             event.preventDefault();
         }
     }
@@ -335,11 +370,25 @@ function preventDefaultForModal(event) {
 function closeModal() {
     const modal = document.getElementById('nameModal');
     modal.style.display = 'none';
-    isModalOpen = false;
+    isModalOpen = false; // Set to false when modal is closed
     document.removeEventListener('keydown', preventDefaultForModal);
     showCursor();  // Ensure cursor is visible after closing modal
 }
-  
+
+function checkFirstTimeUser() {
+    if (!localStorage.getItem('username')) {
+        showNameInputModal('', 'Choose Username', '')
+            .then(username => {
+                if (username) {
+                    localStorage.setItem('username', username);
+                }
+            });
+    }
+}
+
+// Call this when your game starts
+initGame();
+
 async function fetchLeaderboard(mode) {
     try {
         console.log(`Fetching leaderboard for ${mode} mode...`);
@@ -990,7 +1039,7 @@ function updateHighScore() {
 
 let gameOverHandled = false;
 
-function handleGameOver() {
+async function handleGameOver() {
     if (!gameOverHandled) {
         console.log("Game Over function called");
         gameOver = true;
@@ -998,16 +1047,19 @@ function handleGameOver() {
         gameOverHandled = true;
         updateHighScore();
         showCursor();  // Show the cursor when the game is over
-        submitScore(score, hardModeActive ? 'Hard' : 'Normal');
+        await submitScore(score, hardModeActive ? 'Hard' : 'Normal');
     }
 }
 
-function promptPlayerName() {
+
+async function promptPlayerName() {
     if (!scoreSubmitted) {
         console.log("Prompting for player name");
-        const playerName = prompt("Enter your name for the leaderboard:", "Player");
+        const storedUsername = localStorage.getItem('username') || '';
+        const playerName = await showNameInputModal(storedUsername);
         if (playerName) {
-            submitScore(playerName, score, hardModeActive ? 'Hard' : 'Normal');
+            localStorage.setItem('username', playerName); // Update stored username
+            await submitScore(score, hardModeActive ? 'Hard' : 'Normal');
             scoreSubmitted = true;
         }
     }
@@ -1138,6 +1190,9 @@ function resetAllVariables() {
     localStorage.setItem('hardModeHighScore', '0');
     localStorage.setItem('hardModeUnlocked', 'false');
 
+    // Clear stored username
+    localStorage.removeItem('username');
+
     // Reset unlocked characters
     const characterFolders = getCharacterFolders();
     unlockedCharacters = {};
@@ -1150,7 +1205,7 @@ function resetAllVariables() {
     currentCharacterIndex = 'crump1';
     updateCharacterImages();
 
-    console.log('All variables reset, including unlocked characters');
+    console.log('All variables reset, including unlocked characters and username');
     showResetMessage();
     resetGame(); // Add this line to reset the game state
 }
@@ -1428,7 +1483,6 @@ function update() {
     if (!gameStarted) return;
     if (gameOver) {
         if (!gameOverHandled) {
-            console.log("Game over, calling handleGameOver");
             showCursor();
             handleGameOver();
         }
