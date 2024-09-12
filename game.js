@@ -162,7 +162,7 @@ function update(deltaTime) {
 // Character effect drawing function
 
 function updateSpeedSparkles() {
-    if (score > 15 && characterEffects[currentCharacterIndex]?.speedSparkle) {
+    if (score >= 15 && characterEffects[gameplayCharacter]?.speedSparkle) {
         // Define an offset to place sparkles behind the character
         const sparkleOffsetX = -10; // Adjust this value as needed
 
@@ -191,7 +191,7 @@ function updateSpeedSparkles() {
 }
 
 function drawSpeedSparkles() {
-    if (score > 15 && characterEffects[currentCharacterIndex]?.speedSparkle) {
+    if (score >= 15 && characterEffects[gameplayCharacter]?.speedSparkle) {
         // Calculate speed factor based on pipe speed
         const baseSpeed = INITIAL_PIPE_SPEED;
         const speedFactor = pipeSpeed / baseSpeed;
@@ -239,7 +239,7 @@ function drawSpeedSparkles() {
 }
 
 function drawSparkles() {
-    if (characterEffects[currentCharacterIndex]?.sparkle) {
+    if (characterEffects[gameplayCharacter]?.sparkle) {
         // Calculate speed factor based on pipe speed
         const baseSpeed = INITIAL_PIPE_SPEED;
         const speedFactor = pipeSpeed / baseSpeed;
@@ -446,7 +446,7 @@ async function submitScore(score, mode) {
                 playerName, 
                 score, 
                 mode,
-                character: currentCharacterIndex
+                character: gameplayCharacter
             })
         });
         if (!submitResponse.ok) {
@@ -639,22 +639,18 @@ function displayLeaderboard(leaderboardData) {
     });
 }
 
-function drawCharacterSelection(x, y, width, height) {
-    // Use the sorted character list
-    const sortedCharacters = getCharacterFolders().sort((a, b) => {
-        return getCharacterDifficulty(a) - getCharacterDifficulty(b);
-    });
-    const currentIndex = sortedCharacters.indexOf(currentCharacterIndex);
+function drawCharacterSelection(x, y, width, height, characterToShow = null) {
+    const characterToDisplay = characterToShow || currentCharacterIndex;
 
     // Draw character
-    if (characterImages[currentCharacterIndex]) {
-        const img = characterImages[currentCharacterIndex].up;
+    if (characterImages[characterToDisplay]) {
+        const img = characterImages[characterToDisplay].up;
         if (img.complete) {
             // Calculate scaling to fit the image within the given dimensions
             let scale = Math.min(width / img.width, height / img.height);
             
             // Apply a smaller scale factor for crump0
-            if (currentCharacterIndex === 'crump0') {
+            if (characterToDisplay === 'crump0') {
                 scale *= 0.75; // Adjust this value to make crump0 smaller or larger
             }
             
@@ -671,54 +667,56 @@ function drawCharacterSelection(x, y, width, height) {
         }
     }
 
-    if (!unlockedCharacters[currentCharacterIndex]) {
-        // Draw semi-transparent overlay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(x, y, width, height);
-        
-        // Draw lock icon
+    // Only draw UI elements if not showing a specific character (i.e., for selection screen)
+    if (!characterToShow) {
+        if (!unlockedCharacters[currentCharacterIndex]) {
+            // Draw semi-transparent overlay
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(x, y, width, height);
+            
+            // Draw lock icon
+            ctx.fillStyle = 'white';
+            ctx.font = `${width * 0.5}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🔒', x + width / 2, y + height / 2);
+        }
+
+        // Draw arrow buttons
+        const arrowWidth = 30;
+        const arrowHeight = 30;
+        const arrowY = y + height / 2 - arrowHeight / 2;
+
+        // Left arrow
         ctx.fillStyle = 'white';
-        ctx.font = `${width * 0.5}px Arial`;
+        ctx.beginPath();
+        ctx.moveTo(x - arrowWidth - 10, arrowY + arrowHeight / 2);
+        ctx.lineTo(x - 10, arrowY);
+        ctx.lineTo(x - 10, arrowY + arrowHeight);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right arrow
+        ctx.beginPath();
+        ctx.moveTo(x + width + arrowWidth + 10, arrowY + arrowHeight / 2);
+        ctx.lineTo(x + width + 10, arrowY);
+        ctx.lineTo(x + width + 10, arrowY + arrowHeight);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw character name
+        ctx.fillStyle = 'white';
+        ctx.font = `20px ${GAME_FONT}`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🔒', x + width / 2, y + height / 2);
-    }
-
-
-    // Draw arrow buttons
-    const arrowWidth = 30;
-    const arrowHeight = 30;
-    const arrowY = y + height / 2 - arrowHeight / 2;
-
-    // Left arrow
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.moveTo(x - arrowWidth - 10, arrowY + arrowHeight / 2);
-    ctx.lineTo(x - 10, arrowY);
-    ctx.lineTo(x - 10, arrowY + arrowHeight);
-    ctx.closePath();
-    ctx.fill();
-
-    // Right arrow
-    ctx.beginPath();
-    ctx.moveTo(x + width + arrowWidth + 10, arrowY + arrowHeight / 2);
-    ctx.lineTo(x + width + 10, arrowY);
-    ctx.lineTo(x + width + 10, arrowY + arrowHeight);
-    ctx.closePath();
-    ctx.fill();
-
-    // Draw character name
-    ctx.fillStyle = 'white';
-    ctx.font = `20px ${GAME_FONT}`; // Updated to use GAME_FONT
-    ctx.textAlign = 'center';
-    const name = characterNames[currentCharacterIndex] || currentCharacterIndex;
-    ctx.fillText(name, x + width / 2, y + height + 10);
-    
-    // Draw unlock condition
-    if (!unlockedCharacters[currentCharacterIndex]) {
-        ctx.fillStyle = 'yellow';
-        ctx.font = `14px ${GAME_FONT}`; // Updated to use GAME_FONT
-        ctx.fillText(getUnlockCondition(currentCharacterIndex), x + width / 2, y + height + 25);
+        const name = characterNames[currentCharacterIndex] || currentCharacterIndex;
+        ctx.fillText(name, x + width / 2, y + height + 10);
+        
+        // Draw unlock condition
+        if (!unlockedCharacters[currentCharacterIndex]) {
+            ctx.fillStyle = 'yellow';
+            ctx.font = `14px ${GAME_FONT}`;
+            ctx.fillText(getUnlockCondition(currentCharacterIndex), x + width / 2, y + height + 25);
+        }
     }
 }
 
@@ -989,6 +987,7 @@ function showLockedCharacterMessage() {
 function startGame(hardMode) {
     gameStarted = true;
     hardModeActive = hardMode;
+    gameplayCharacter = currentCharacterIndex; // Set the gameplay character
     resetGame(hardMode);
     bird.velocity = bird.jump * INITIAL_JUMP_MULTIPLIER;
     canvas.classList.add('playing'); // Add this line
@@ -1251,6 +1250,7 @@ async function handleGameOver() {
         console.log("Game Over function called");
         gameOver = true;
         gameOverTime = Date.now();
+        gameplayCharacter = currentCharacterIndex; // Store the character used during gameplay
         gameOverHandled = true;
         updateHighScore();
         showCursor();  // Show the cursor when the game is over
@@ -2001,14 +2001,14 @@ function draw() {
     // Determine which image to use based on velocity
     let imageToDraw;
     if (bird.velocity < -1) {
-        imageToDraw = crumpImgDown;  // Changed from crumpImgUp
+        imageToDraw = characterImages[gameplayCharacter].down;
     } else if (bird.velocity > 1) {
-        imageToDraw = crumpImgUp;    // Changed from crumpImgDown
+        imageToDraw = characterImages[gameplayCharacter].up;
     } else {
-        imageToDraw = currentCrumpImg;
+        imageToDraw = characterImages[gameplayCharacter].neutral;
     }
 
-    if (currentCharacterIndex === 'crump0') {
+    if (gameplayCharacter === 'crump0') {
         // Special handling for crump0
         const sizeReductionFactor = 0.7; // Adjust as needed
         const scale = (bird.width / 70) * sizeReductionFactor;
@@ -2031,6 +2031,7 @@ function draw() {
     }
 
     ctx.restore();
+
 
     // Draw sparkles for characters with the sparkle effect
     drawSparkles();
@@ -2063,12 +2064,13 @@ function draw() {
 
     drawUnlockNotification();
 
-    // Draw score - align left
-    drawTextWithOutline(`Score: ${score}`, 10, 24, '#FFD700', 'black', 2, '24px', 'bold', 'left', 'top');
+    // Draw score - centered at the very top
+    const scoreText = score.toString();
+    drawTextWithOutline(scoreText, gameWidth / 2, 10, '#FFD700', 'black', 3, '56px', 'bold', 'center', 'top');
 
-    // Draw high score - align left
+    // Draw best score - align left at the very top
     const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
-    drawTextWithOutline(`High Score: ${currentHighScore}`, 10, 48, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
+    //drawTextWithOutline(`Best: ${currentHighScore}`, 10, 10, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
 
     // Draw speed meter
     const SPEED_METER_WIDTH = 100;
@@ -2136,27 +2138,28 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Move "Game Over" text up
+        // Draw "Game Over" text
         drawTextWithOutline('Game Over', gameWidth / 2, gameHeight * 0.2, '#FF4136', 'black', 3, '48px', 'bold', 'center', 'middle');
 
-        // Move Score and High Score up
+        // Draw Score and High Score
         drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
         drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
-        drawQuestionMark();
 
-
-    
-        if (Date.now() - gameOverTime < GAME_OVER_DELAY) {
+        const elapsedTime = Date.now() - gameOverTime;
+        if (elapsedTime < GAME_OVER_DELAY) {
+            // Draw progress bar
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.fillRect(0, gameHeight - 5, (Date.now() - gameOverTime) / GAME_OVER_DELAY * gameWidth, 5);
+            ctx.fillRect(0, gameHeight - 5, (elapsedTime / GAME_OVER_DELAY) * gameWidth, 5);
         } else {
-            // Draw character selection
+            // Draw gameplay character in the background
             const characterWidth = gameWidth * 0.2;
             const characterHeight = characterWidth;
             const characterX = (gameWidth - characterWidth) / 2;
             const characterY = gameHeight * 0.475;
-            drawCharacterSelection(characterX, characterY, characterWidth, characterHeight);
             
+            // Draw character selection UI on top
+            drawCharacterSelection(characterX, characterY, characterWidth, characterHeight);
+
             // Calculate button dimensions and positions
             const buttonWidth = 140;
             const buttonHeight = buttonWidth * (200 / 480);
@@ -2173,40 +2176,27 @@ function draw() {
                 // Draw "Hard Mode" button
                 ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
             }
-            
-            // Show Leaderboard
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            // Draw "Game Over" text
-            drawTextWithOutline('Game Over', gameWidth / 2, gameHeight * 0.2, '#FF4136', 'black', 3, '48px', 'bold', 'center', 'middle');
-
-            // Draw Score and High Score
-            drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
-            drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
 
             // Draw "Leaderboard" button (white background, black text)
-            const leaderboardButtonWidth = 120; // Reduced width
+            const leaderboardButtonWidth = 120;
             const leaderboardButtonHeight = 25;
             const leaderboardButtonX = (gameWidth - leaderboardButtonWidth) / 2;
-            const leaderboardButtonY = gameHeight * 0.4; // Moved up
+            const leaderboardButtonY = gameHeight * 0.4;
             drawButton(leaderboardButtonX, leaderboardButtonY, leaderboardButtonWidth, leaderboardButtonHeight, 'Leaderboard', '#FFFFFF', '#000000', '18px');
-
-    
-
         }
 
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
     }
 
+    // Draw question mark (moved outside the gameOver condition)
+    drawQuestionMark();
+
     // Always check if instructions should be shown last
     if (showingInstructions) {
         drawInstructionsPopup();
     }
+
     // Draw debug information on top of everything else
     drawDebugInfo();
 
