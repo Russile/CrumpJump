@@ -2065,7 +2065,9 @@ function draw() {
 
     // Draw score - centered at the very top
     const scoreText = score.toString();
-    drawTextWithOutline(scoreText, gameWidth / 2, 10, 'white', 'black', 2, '56px', 'bold', 'center', 'top');
+    drawTextWithOutline(scoreText, gameWidth / 2, 10, 'white', 'black', 3, '64px', 'bold', 'center', 'top');
+    
+
 
 
     // Draw speed meter
@@ -2077,21 +2079,43 @@ function draw() {
 
     // Position speed meter at bottom left
     const meterX = SPEED_METER_MARGIN;
-
-    // Draw meter background
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.fillRect(meterX, gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT, SPEED_METER_WIDTH, SPEED_METER_HEIGHT);
+    const meterY = gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT;
 
     // Draw meter fill
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
-    ctx.fillRect(meterX, gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT, meterFillWidth, SPEED_METER_HEIGHT);
+    let fillColor = 'rgba(255, 0, 0, 0.7)';
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(meterX, meterY, meterFillWidth, SPEED_METER_HEIGHT);
+
+    // Draw boost indicator
+    if (boosting) {
+        const plusSize = SPEED_METER_HEIGHT; // Size of the plus symbol
+        const plusX = meterX + meterFillWidth + 5; // 5 pixels to the right of the fill
+        const plusY = meterY + SPEED_METER_HEIGHT / 2; // Centered vertically
+
+        ctx.fillStyle = 'red';
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+
+        // Draw the horizontal line of the plus
+        ctx.beginPath();
+        ctx.moveTo(plusX - plusSize/4, plusY);
+        ctx.lineTo(plusX + plusSize/4, plusY);
+        ctx.stroke();
+
+        // Draw the vertical line of the plus
+        ctx.beginPath();
+        ctx.moveTo(plusX, plusY - plusSize/4);
+        ctx.lineTo(plusX, plusY + plusSize/4);
+        ctx.stroke();
+    }
 
     // Draw meter border
     ctx.strokeStyle = 'white';
-    ctx.strokeRect(meterX, gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT, SPEED_METER_WIDTH, SPEED_METER_HEIGHT);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(meterX, meterY, SPEED_METER_WIDTH, SPEED_METER_HEIGHT);
 
     // Draw speed label
-    drawTextWithOutline('Speed', meterX, gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT - 5, 'white', 'black', 2, '20px', 'normal', 'left', 'bottom');
+    drawTextWithOutline('Speed', meterX, meterY - 5, 'white', 'black', 1, '16px', 'normal', 'left', 'bottom');
 
   // Calculate dimensions for the mode images
   const modeImgWidth = gameWidth * 0.25;
@@ -2131,7 +2155,7 @@ function draw() {
   const highScoreText = `★${currentHighScore}`;
   const highScoreX = modeImgX + modeImgWidth / 2; // Center over mode indicator
   const highScoreY = modeImgY; 
-  drawTextWithOutline(highScoreText, highScoreX, highScoreY, 'white', 'black', 1, '24px', 'normal', 'center', 'bottom');
+  drawTextWithShading(highScoreText, highScoreX, highScoreY, 'white', 'black', 1, '24px', 'normal', 'center', 'bottom');
 
     if (gameOver) {
         // Semi-transparent background
@@ -2224,6 +2248,52 @@ function drawTextWithOutline(text, x, y, fillStyle, strokeStyle, lineWidth, font
     y = Math.round(y);
     ctx.strokeText(text, x, y);
     ctx.fillText(text, x, y);
+}
+
+// Function to draw text with background shading
+function drawTextWithShading(text, x, y, fillStyle, strokeStyle, lineWidth, fontSize, fontWeight, align, baseline) {
+    ctx.save();
+    
+    // Set up the font first to get accurate measurements
+    ctx.font = `${fontWeight} ${fontSize} ${GAME_FONT}`;
+    
+    // Draw shading
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Semi-transparent black
+    const padding = 0; // Reduced padding
+    const metrics = ctx.measureText(text);
+    const textWidth = metrics.width;
+    const textHeight = parseInt(fontSize); // Approximate height based on font size
+    
+    let rectX, rectY, rectWidth, rectHeight;
+    
+    if (align === 'center') {
+        rectX = x - textWidth / 2 - padding;
+        rectWidth = textWidth + padding * 2;
+    } else if (align === 'right') {
+        rectX = x - textWidth - padding;
+        rectWidth = textWidth + padding * 2;
+    } else {
+        rectX = x - padding;
+        rectWidth = textWidth + padding * 2;
+    }
+    
+    if (baseline === 'top') {
+        rectY = y - padding;
+        rectHeight = textHeight + padding * 2;
+    } else if (baseline === 'bottom') {
+        rectY = y - textHeight - padding;
+        rectHeight = textHeight + padding * 2;
+    } else { // middle
+        rectY = y - textHeight / 2 - padding;
+        rectHeight = textHeight + padding * 2;
+    }
+    
+    ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+    
+    // Draw text
+    drawTextWithOutline(text, x, y, fillStyle, strokeStyle, lineWidth, fontSize, fontWeight, align, baseline);
+    
+    ctx.restore();
 }
 
 function hideCursor() {
