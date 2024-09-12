@@ -58,24 +58,7 @@ function getCharacterFolders() {
     ]; 
 }
 
-function initializeCharacters() {
-    const characterFolders = getCharacterFolders();
 
-    characterFolders.forEach((folder) => {
-        // Only initialize if it's in unlockConditions or it's the always unlocked character
-        if (unlockConditions[folder] || folder === ALWAYS_UNLOCKED_CHARACTER) {
-            characterImages[folder] = {
-                neutral: new Image(),
-                up: new Image(),
-                down: new Image()
-            };
-            characterImages[folder].neutral.src = `assets/characters/${folder}/${folder}.png`;
-            characterImages[folder].up.src = `assets/characters/${folder}/${folder}_up.png`;
-            characterImages[folder].down.src = `assets/characters/${folder}/${folder}_down.png`;
-        }
-    });
-
-}
 
 function updateCharacterImages() {
     if (characterImages[currentCharacterIndex]) {
@@ -90,12 +73,38 @@ function updateCharacterImages() {
     }
 }
 
+function getCharacterDifficulty(character) {
+    if (character === ALWAYS_UNLOCKED_CHARACTER) return -1; // Always first
+    const condition = unlockConditions[character];
+    if (!condition) return Infinity; // Put unknown characters at the end
+    return (condition.mode === 'Hard' ? 1000 : 0) + condition.score;
+}
+
+const sortedCharacters = getCharacterFolders().sort((a, b) => {
+    return getCharacterDifficulty(a) - getCharacterDifficulty(b);
+});
+
 function switchCharacter(direction) {
-    let availableCharacters = Object.keys(unlockedCharacters).filter(char => unlockedCharacters[char]);
+    let availableCharacters = sortedCharacters.filter(char => unlockedCharacters[char]);
     let currentIndex = availableCharacters.indexOf(currentCharacterIndex);
     currentIndex = (currentIndex + direction + availableCharacters.length) % availableCharacters.length;
     currentCharacterIndex = availableCharacters[currentIndex];
     updateCharacterImages();
+}
+
+function initializeCharacters() {
+    sortedCharacters.forEach((folder) => {
+        if (unlockConditions[folder] || folder === ALWAYS_UNLOCKED_CHARACTER) {
+            characterImages[folder] = {
+                neutral: new Image(),
+                up: new Image(),
+                down: new Image()
+            };
+            characterImages[folder].neutral.src = `assets/characters/${folder}/${folder}.png`;
+            characterImages[folder].up.src = `assets/characters/${folder}/${folder}_up.png`;
+            characterImages[folder].down.src = `assets/characters/${folder}/${folder}_down.png`;
+        }
+    });
 }
 
 let showingUnlockNotification = false;
@@ -523,8 +532,11 @@ function displayLeaderboard(leaderboardData) {
 }
 
 function drawCharacterSelection(x, y, width, height) {
-    const characterFolders = getCharacterFolders();
-    const currentIndex = characterFolders.indexOf(currentCharacterIndex);
+    // Use the sorted character list
+    const sortedCharacters = getCharacterFolders().sort((a, b) => {
+        return getCharacterDifficulty(a) - getCharacterDifficulty(b);
+    });
+    const currentIndex = sortedCharacters.indexOf(currentCharacterIndex);
 
     // Draw character
     if (characterImages[currentCharacterIndex]) {
@@ -543,7 +555,7 @@ function drawCharacterSelection(x, y, width, height) {
             const offsetX = (width - scaledWidth) / 2;
             const offsetY = (height - scaledHeight) / 2;
 
-            ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight)
+            ctx.drawImage(img, x + offsetX, y + offsetY, scaledWidth, scaledHeight);
         } else {
             // Draw placeholder if image is not loaded
             ctx.fillStyle = 'gray';
@@ -660,10 +672,12 @@ function drawBoostTrail() {
 }
 
 function switchCharacter(direction) {
-    const characterFolders = getCharacterFolders();
-    let currentIndex = characterFolders.indexOf(currentCharacterIndex);
-    currentIndex = (currentIndex + direction + characterFolders.length) % characterFolders.length;
-    currentCharacterIndex = characterFolders[currentIndex];
+    const sortedCharacters = getCharacterFolders().sort((a, b) => {
+        return getCharacterDifficulty(a) - getCharacterDifficulty(b);
+    });
+    let currentIndex = sortedCharacters.indexOf(currentCharacterIndex);
+    currentIndex = (currentIndex + direction + sortedCharacters.length) % sortedCharacters.length;
+    currentCharacterIndex = sortedCharacters[currentIndex];
     updateCharacterImages();
 }
 
