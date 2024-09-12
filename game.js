@@ -410,7 +410,8 @@ function sanitizeInput(input) {
 }
 
 async function submitScore(score, mode) {
-    if (score <= 1 || debugModeActivated) {
+    if (score <= 1) {
+        //    if (score <= 1 || debugModeActivated) {
         console.log("Score not submitted: Too low or debug mode was used");
         return;
     }
@@ -423,22 +424,23 @@ async function submitScore(score, mode) {
         const leaderboard = await response.json();
 
         let playerName = localStorage.getItem('username') || "";
-        
+
         // Check if score is eligible for leaderboard
         if (leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score) {
             // Prompt for name, pre-populated with current username
             const newName = await showNameInputModal(playerName, 'New High Score!', 'Enter your name for the leaderboard:');
             if (newName) {
-                playerName = newName;
-            } else {
+                playerName = newName; // Use the new name if provided
+            } else if (!playerName) {
                 console.log("Name input cancelled, score not submitted");
-                return; // Exit if user cancels name input
+                return; // Exit if user cancels name input and no existing name is set
             }
         } else if (!playerName) {
             // If not a high score but no username is set, use a default
-            playerName = "Anonymous";
+            playerName = "noHighScore";
         }
 
+        // Proceed to submit the score with the playerName
         const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -449,6 +451,7 @@ async function submitScore(score, mode) {
                 character: gameplayCharacter
             })
         });
+
         if (!submitResponse.ok) {
             throw new Error(`HTTP error! status: ${submitResponse.status}`);
         }
