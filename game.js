@@ -156,10 +156,10 @@ function drawSparkles() {
         sparklePositions.forEach((sparkle) => {
             const ageRatio = sparkle.age / MAX_SPARKLE_COUNT;
             
-            // Size calculation: start big, shrink faster
+            // Size calculation: start big, shrink faster, but never below minSize
             const maxSize = 3;
             const minSize = 0.5;
-            const size = maxSize - (maxSize - minSize) * ageRatio * speedFactor;
+            const size = Math.max(minSize, maxSize - (maxSize - minSize) * ageRatio * speedFactor);
             
             // Color transition from purple to white (faster)
             const colorTransitionSpeed = 3; // Increase this value for faster color transition
@@ -172,20 +172,23 @@ function drawSparkles() {
             const opacityFadeStart = 0.3; // Start fading at 30% of lifespan
             let opacity;
             if (ageRatio < opacityFadeStart) {
-                opacity = 0.4; // Full opacity until fade starts
+                opacity = 0.5; // Full opacity until fade starts
             } else {
-                opacity = 0.4 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
+                opacity = 0.5 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
             }
 
             // Apply the X offset to the sparkle position
             const adjustedX = sparkle.x + sparkleOffsetX;
 
-            ctx.save();
-            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-            ctx.beginPath();
-            ctx.arc(adjustedX, sparkle.y, size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+            // Only draw if size is positive
+            if (size > 0) {
+                ctx.save();
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+                ctx.beginPath();
+                ctx.arc(adjustedX, sparkle.y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
         });
     }
 }
