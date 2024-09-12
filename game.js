@@ -503,12 +503,22 @@ function displayLeaderboard(leaderboardData) {
     // Draw leaderboard entries
     let yPos = 100;
     const imgSize = 40; // Adjust this value as needed
-    const haloSize = imgSize -7; // Slightly smaller than the image
+    const haloSize = imgSize - 7; // Slightly smaller than the image
     const haloColor = 'rgba(255, 255, 255, 0.2)'; // White with some transparency
 
     leaderboardData.forEach((entry, index) => {
-        const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
-        drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        // Format the date
+        const date = new Date(entry.timestamp);
+        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
+
+        // Draw score, name, and date
+        const scoreText = `${index + 1}. ${entry.playerName}: ${entry.score}`;
+        drawTextWithOutline(scoreText, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        
+        // Draw date inline
+        const dateText = `${formattedDate}`;
+        const scoreWidth = ctx.measureText(scoreText).width;
+        drawTextWithOutline(dateText, gameWidth / 2 + scoreWidth / 2 + 5, yPos, 'yellow', 'black', 2, '14px', 'normal', 'left', 'middle');
         
         // Draw character image with halo
         const characterKey = entry.character || 'crump1';
