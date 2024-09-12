@@ -253,7 +253,6 @@ async function submitScore(score, mode) {
             const newName = await showNameInputModal(playerName, 'New High Score!', 'Enter your name for the leaderboard:');
             if (newName) {
                 playerName = newName;
-                localStorage.setItem('username', playerName); // Update stored username
             } else {
                 console.log("Name input cancelled, score not submitted");
                 return; // Exit if user cancels name input
