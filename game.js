@@ -1644,8 +1644,7 @@ drawTextWithOutline(`High Score: ${currentHighScore}`, 10, 48, '#FFFFFF', 'black
 // Draw debug information on top of everything else
 drawDebugInfo();
 
-// Always draw the question mark on top
-drawQuestionMark();
+
 
 if (showingInstructions) {
     drawInstructionsPopup();
@@ -2066,11 +2065,8 @@ function draw() {
 
     // Draw score - centered at the very top
     const scoreText = score.toString();
-    drawTextWithOutline(scoreText, gameWidth / 2, 10, '#FFD700', 'black', 3, '56px', 'bold', 'center', 'top');
+    drawTextWithOutline(scoreText, gameWidth / 2, 10, 'white', 'black', 2, '56px', 'bold', 'center', 'top');
 
-    // Draw best score - align left at the very top
-    const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
-    //drawTextWithOutline(`Best: ${currentHighScore}`, 10, 10, '#FFFFFF', 'black', 2, '20px', 'normal', 'left', 'top');
 
     // Draw speed meter
     const SPEED_METER_WIDTH = 100;
@@ -2097,38 +2093,45 @@ function draw() {
     // Draw speed label
     drawTextWithOutline('Speed', meterX, gameHeight - SPEED_METER_MARGIN - SPEED_METER_HEIGHT - 5, 'white', 'black', 2, '20px', 'normal', 'left', 'bottom');
 
-    // Calculate dimensions for the mode images
-    const modeImgWidth = gameWidth * 0.25;
-    const modeImgHeight = modeImgWidth * (200 / 480);
-    const modeImgX = gameWidth - modeImgWidth - 5;
-    const modeImgY = gameHeight - modeImgHeight - 5;
+  // Calculate dimensions for the mode images
+  const modeImgWidth = gameWidth * 0.25;
+  const modeImgHeight = modeImgWidth * (200 / 480);
+  const modeImgX = gameWidth - modeImgWidth - 5;
+  const modeImgY = gameHeight - modeImgHeight - 5;
 
-    // Draw mode indicator
-    if (showingUnlockPopup && !gameOver) {
-        ctx.drawImage(hardModeUnlockedImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
-    } else if (hardModeActive) {
-        if (gameOver) {
-            ctx.globalAlpha = 0.5;
-        }
-        ctx.drawImage(hardModeActiveImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
-        ctx.globalAlpha = 1.0;
-    } else {
-        ctx.drawImage(normalModeImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+  // Draw mode indicator
+  if (showingUnlockPopup && !gameOver) {
+      ctx.drawImage(hardModeUnlockedImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+  } else if (hardModeActive) {
+      if (gameOver) {
+          ctx.globalAlpha = 0.5;
+      }
+      ctx.drawImage(hardModeActiveImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
+      ctx.globalAlpha = 1.0;
+  } else {
+      ctx.drawImage(normalModeImg, modeImgX, modeImgY, modeImgWidth, modeImgHeight);
 
-        // Draw progress indicator for hard mode unlock
-        if (!hardModeUnlocked) {
-            const progress = Math.min(score / HARD_MODE_UNLOCK_SCORE, 1);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; // Transparent white
-            
-            // Calculate the actual dimensions of the "Normal Mode" text within the image
-            const textWidth = modeImgWidth * 0.9; // Adjust this value as needed
-            const textHeight = modeImgHeight * 0.7; // Adjust this value as needed
-            const textX = modeImgX + (modeImgWidth - textWidth) / 2;
-            const textY = modeImgY + (modeImgHeight - textHeight) / 2;
+      // Draw progress indicator for hard mode unlock
+      if (!hardModeUnlocked) {
+          const progress = Math.min(score / HARD_MODE_UNLOCK_SCORE, 1);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; // Transparent white
+          
+          // Calculate the actual dimensions of the "Normal Mode" text within the image
+          const textWidth = modeImgWidth * 0.9; // Adjust this value as needed
+          const textHeight = modeImgHeight * 0.7; // Adjust this value as needed
+          const textX = modeImgX + (modeImgWidth - textWidth) / 2;
+          const textY = modeImgY + (modeImgHeight - textHeight) / 2;
 
-            ctx.fillRect(textX, textY, textWidth * progress, textHeight);
-        }
-    }
+          ctx.fillRect(textX, textY, textWidth * progress, textHeight);
+      }
+  }
+
+  // Draw best score with star icon - align right above the mode indicator
+  const currentHighScore = hardModeActive ? hardModeHighScore : normalModeHighScore;
+  const highScoreText = `★${currentHighScore}`;
+  const highScoreX = modeImgX + modeImgWidth / 2; // Center over mode indicator
+  const highScoreY = modeImgY; 
+  drawTextWithOutline(highScoreText, highScoreX, highScoreY, 'white', 'black', 1, '24px', 'normal', 'center', 'bottom');
 
     if (gameOver) {
         // Semi-transparent background
@@ -2144,6 +2147,9 @@ function draw() {
         // Draw Score and High Score
         drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
         drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
+
+        // Draw question mark (moved outside the gameOver condition)
+        drawQuestionMark();
 
         const elapsedTime = Date.now() - gameOverTime;
         if (elapsedTime < GAME_OVER_DELAY) {
@@ -2189,8 +2195,7 @@ function draw() {
         ctx.textBaseline = 'alphabetic';
     }
 
-    // Draw question mark (moved outside the gameOver condition)
-    drawQuestionMark();
+
 
     // Always check if instructions should be shown last
     if (showingInstructions) {
