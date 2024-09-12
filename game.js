@@ -14,11 +14,19 @@ const characterNames = {
     crump3: 'GOOGINI',
     crump4: "BEAR",
     crump5: "MORTY",
-    crump6: "XK"
+    crump6: "XK",
+    crump7: "JELLY"
     // Add more character names as needed
 };
 // Add this new array to store character images
 const characterImages = [];
+
+const characterEffects = {
+    crump7: {
+        sparkle: true
+    }
+    // Add other characters and their effects here
+};
 
 // Define unlock conditions
 const unlockConditions = {
@@ -27,7 +35,8 @@ const unlockConditions = {
     crump3: { mode: 'Normal', score: 30 },
     crump4: { mode: 'Normal', score: 40 },
     crump5: { mode: 'Normal', score: 50 },
-    crump6: { mode: 'Hard', score: 10 }
+    crump6: { mode: 'Hard', score: 10 },
+    crump7: { mode: 'Hard', score: 30 }
     // Add more characters and their unlock conditions here
 };
 
@@ -45,7 +54,7 @@ let unlockedCharacters = {};
 const ALWAYS_UNLOCKED_CHARACTER = 'crump1';
 
 function getCharacterFolders() {
-    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5', 'crump6'
+    return ['crump0', 'crump1', 'crump2', 'crump3', 'crump4', 'crump5', 'crump6', 'crump7'
     ]; 
 }
 
@@ -128,6 +137,59 @@ function loadHighScores() {
     checkAllCharacterUnlocks(); // Add this line
 }
 
+
+function update(deltaTime) {
+    // ... other update code ...
+    sparkleTime += deltaTime;
+}
+
+
+function drawSparkles() {
+    if (characterEffects[currentCharacterIndex]?.sparkle) {
+        // Calculate speed factor based on pipe speed
+        const baseSpeed = INITIAL_PIPE_SPEED;
+        const speedFactor = pipeSpeed / baseSpeed;
+        
+        // Define an offset to place sparkles behind the character
+        const sparkleOffsetX = -10; // Adjust this value as needed
+        
+        sparklePositions.forEach((sparkle) => {
+            const ageRatio = sparkle.age / MAX_SPARKLE_COUNT;
+            
+            // Size calculation: start big, shrink faster
+            const maxSize = 3;
+            const minSize = 0.5;
+            const size = maxSize - (maxSize - minSize) * ageRatio * speedFactor;
+            
+            // Color transition from purple to white (faster)
+            const colorTransitionSpeed = 3; // Increase this value for faster color transition
+            const colorRatio = Math.min(1, ageRatio * colorTransitionSpeed);
+            const r = Math.round(180 + (75 * colorRatio));
+            const g = Math.round(100 + (155 * colorRatio));
+            const b = Math.round(220 + (35 * colorRatio));
+            
+            // Opacity calculation (slower fade out)
+            const opacityFadeStart = 0.3; // Start fading at 30% of lifespan
+            let opacity;
+            if (ageRatio < opacityFadeStart) {
+                opacity = 0.4; // Full opacity until fade starts
+            } else {
+                opacity = 0.4 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
+            }
+
+            // Apply the X offset to the sparkle position
+            const adjustedX = sparkle.x + sparkleOffsetX;
+
+            ctx.save();
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(adjustedX, sparkle.y, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+}
+
 // Make sure to call this when your game initializes
 function initGame() {
     loadUnlockedCharacters();
@@ -198,6 +260,9 @@ let flapDownFrames = 0;
 let flapTransitionFrames = 0;
 const FLAP_DOWN_DURATION = 3; 
 const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
+let sparkleTime = 0;
+const sparklePositions = [];
+const MAX_SPARKLE_COUNT = 50;
 
 let scoreSubmitted = false;
 let showingLeaderboard = false;
@@ -535,41 +600,59 @@ function drawCharacterSelection(x, y, width, height) {
 }
 
 function updateTrailPositions() {
-    if (boosting) {
-        // Calculate the center of the bird
-        const centerX = bird.x + bird.width / 2;
-        const centerY = bird.y + bird.height / 2;
-        
-        // Add a slight offset to position the trail behind the bird
-        const trailOffsetX = 0; // Adjust this value as needed
-        const trailOffsetY = 0;  // Adjust this value as needed
-        
-        trailPositions.unshift({ 
-            x: centerX + trailOffsetX, 
-            y: centerY + trailOffsetY 
-        });
-        
-        if (trailPositions.length > MAX_TRAIL_LENGTH) {
-            trailPositions.pop();
-        }
-    } else {
-        trailPositions.length = 0; // Clear the trail when not boosting
+    // Calculate the center of the bird
+    const centerX = bird.x + bird.width / 2;
+    const centerY = bird.y + bird.height / 2;
+    
+    // Add a slight offset to position the trail behind the bird
+    const trailOffsetX = 0; // Adjust this value as needed
+    const trailOffsetY = 0;  // Adjust this value as needed
+    
+    trailPositions.unshift({ 
+        x: centerX + trailOffsetX, 
+        y: centerY + trailOffsetY 
+    });
+    
+    if (trailPositions.length > MAX_TRAIL_LENGTH) {
+        trailPositions.pop();
     }
 }
 
 function drawBoostTrail() {
     if (trailPositions.length > 1) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 15;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(trailPositions[0].x, trailPositions[0].y);
-        for (let i = 1; i < trailPositions.length; i++) {
-            ctx.lineTo(trailPositions[i].x, trailPositions[i].y);
-            ctx.globalAlpha = 1 - (i / trailPositions.length); // Fade out the trail
+        // Draw the normal boost trail only when boosting
+        if (boosting) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 15;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(trailPositions[0].x, trailPositions[0].y);
+            for (let i = 1; i < trailPositions.length; i++) {
+                ctx.lineTo(trailPositions[i].x, trailPositions[i].y);
+                ctx.globalAlpha = 1 - (i / trailPositions.length); // Fade out the trail
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1; // Reset global alpha
         }
-        ctx.stroke();
-        ctx.globalAlpha = 1; // Reset global alpha
+
+        // Add sparkles for crump7 always
+        if (currentCharacterIndex === 'crump7') {
+            for (let i = 0; i < trailPositions.length; i++) {
+                const sparkleCount = Math.floor(Math.random() * 3) + 1; // 1 to 3 sparkles per position
+                for (let j = 0; j < sparkleCount; j++) {
+                    const offsetX = (Math.random() - 0.5) * 20 - 20; // Shift sparkles to the left
+                    const offsetY = (Math.random() - 0.5) * 20;
+                    const size = (Math.sin(sparkleTime * 10 + i * 0.5) * 2 + 3) * (1 - i / trailPositions.length);
+                    const rotation = sparkleTime * 2 + i * 0.1;
+                    drawSparkles(
+                        trailPositions[i].x + offsetX,
+                        trailPositions[i].y + offsetY,
+                        size,
+                        rotation
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -1384,7 +1467,7 @@ function draw() {
 
     // Draw pipes
     pipes.forEach(pipe => {
-        // ... (rest of the pipe drawing code) ...
+        // don't think this matters anymore but don't want to break it
     });
 
 // Draw bird
@@ -1497,6 +1580,8 @@ function update() {
 
     frameCount++;
 
+
+
     // Apply gravity and update bird position
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
@@ -1514,6 +1599,45 @@ function update() {
 
     // Update trail positions
     updateTrailPositions();
+
+    // Add this line to update sparkleTime
+    sparkleTime += FIXED_DELTA_TIME;
+
+    // Update sparkle positions
+    if (characterEffects[currentCharacterIndex]?.sparkle) {
+        const centerX = bird.x + bird.width / 2;
+        const centerY = bird.y + bird.height / 2;
+        
+        // Add new sparkle only when the character has moved a certain distance
+        if (sparklePositions.length === 0 || 
+            Math.abs(centerX - sparklePositions[0].x) > 5 || // Reduced from 10 to 5
+            Math.abs(centerY - sparklePositions[0].y) > 5) { // Reduced from 10 to 5
+            sparklePositions.unshift({ 
+                x: centerX + (Math.random() - 0.5) * 10, // Add small random X offset
+                y: centerY + (Math.random() - 0.5) * 10, // Add small random Y offset
+                initialY: centerY + (Math.random() - 0.5) * 20, // Keep the random Y offset
+                age: 0
+            });
+        }
+        
+        // Update existing sparkles
+        for (let i = sparklePositions.length - 1; i >= 0; i--) {
+            const sparkle = sparklePositions[i];
+            sparkle.x -= pipeSpeed; // Move sparkles to the left with pipe speed
+            sparkle.y = sparkle.initialY; // Keep Y position constant
+            sparkle.age++;
+            
+            // Remove old sparkles
+            if (sparkle.x <= -10 || sparkle.age >= MAX_SPARKLE_COUNT) {
+                sparklePositions.splice(i, 1);
+            }
+        }
+        
+        // Limit the number of sparkles
+        while (sparklePositions.length > MAX_SPARKLE_COUNT) {
+            sparklePositions.pop();
+        }
+    }
 
     // If boosting, reduce the effect of gravity
     if (boosting) {
@@ -1739,6 +1863,8 @@ function draw() {
     // Draw boost trail
     drawBoostTrail();
 
+
+
     // Draw bird with rotation and current image
     ctx.save();
     ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
@@ -1777,6 +1903,9 @@ function draw() {
     }
 
     ctx.restore();
+
+    // Draw sparkles for characters with the sparkle effect
+    drawSparkles();
 
     // Draw pipes
     pipes.forEach(pipe => {
