@@ -22,10 +22,17 @@ const characterNames = {
 const characterImages = [];
 
 const characterEffects = {
-    crump7: {
-        sparkle: true
-    }
-    // Add other characters and their effects here
+    crump1: { speedSparkle: true },
+    crump2: { speedSparkle: true },
+    crump3: { speedSparkle: true },
+    crump4: { speedSparkle: true },
+    crump5: { speedSparkle: true },
+    crump6: { speedSparkle: true },
+    crump7: { sparkle: true, speedSparkle: true },
+    crump8: { speedSparkle: true },
+    crump9: { speedSparkle: true },
+    crump0: { speedSparkle: true }
+    // Add this for any other characters you have
 };
 
 // Define unlock conditions
@@ -152,6 +159,84 @@ function update(deltaTime) {
     sparkleTime += deltaTime;
 }
 
+// Character effect drawing function
+
+function updateSpeedSparkles() {
+    if (score > 15 && characterEffects[currentCharacterIndex]?.speedSparkle) {
+        // Define an offset to place sparkles behind the character
+        const sparkleOffsetX = -10; // Adjust this value as needed
+
+        // Add new sparkles
+        const centerX = bird.x + bird.width / 2 + sparkleOffsetX; // Add offset here
+        const centerY = bird.y + bird.height / 2;
+        
+        speedSparklePositions.unshift({
+            x: centerX + (Math.random() - 0.5) * 10,
+            y: centerY + (Math.random() - 0.5) * 10,
+            age: 0,
+            rotation: Math.random() * Math.PI * 2
+        });
+
+        // Update existing sparkles
+        speedSparklePositions.forEach(sparkle => {
+            sparkle.age++;
+            sparkle.x -= pipeSpeed; // Move sparkles left at pipe speed
+        });
+
+        // Remove old sparkles
+        speedSparklePositions = speedSparklePositions.filter(sparkle => sparkle.age < MAX_SPEED_SPARKLE_COUNT);
+    } else {
+        speedSparklePositions = []; // Clear sparkles if conditions are not met
+    }
+}
+
+function drawSpeedSparkles() {
+    if (score > 15 && characterEffects[currentCharacterIndex]?.speedSparkle) {
+        // Calculate speed factor based on pipe speed
+        const baseSpeed = INITIAL_PIPE_SPEED;
+        const speedFactor = pipeSpeed / baseSpeed;
+        
+        speedSparklePositions.forEach((sparkle) => {
+            const ageRatio = sparkle.age / MAX_SPEED_SPARKLE_COUNT;
+            
+            // Size calculation: start big, shrink faster, but never below minSize
+            const maxSize = 3;
+            const minSize = 1;
+            const size = Math.max(minSize, maxSize - (maxSize - minSize) * ageRatio * speedFactor);
+            
+            // Opacity calculation (slower fade out)
+            const opacityFadeStart = 0.3;
+            let opacity;
+            if (ageRatio < opacityFadeStart) {
+                opacity = 0.5;
+            } else {
+                opacity = 0.5 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
+            }
+
+            // Only draw if size is positive
+            if (size > 0) {
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; // White color with fading opacity
+                
+                // Use the sparkle's x and y directly
+                ctx.translate(Math.floor(sparkle.x), Math.floor(sparkle.y));
+                
+                // Rotate the context
+                ctx.rotate(sparkle.rotation);
+                
+                // Draw the rotated square
+                ctx.fillRect(
+                    Math.floor(-size / 2), 
+                    Math.floor(-size / 2), 
+                    Math.ceil(size), 
+                    Math.ceil(size)
+                );
+                
+                ctx.restore();
+            }
+        });
+    }
+}
 
 function drawSparkles() {
     if (characterEffects[currentCharacterIndex]?.sparkle) {
@@ -287,6 +372,9 @@ const FLAP_TRANSITION_DURATION = 2; // Duration for transition to neutral
 let sparkleTime = 0;
 const sparklePositions = [];
 const MAX_SPARKLE_COUNT = 50;
+const MAX_SPEED_SPARKLE_COUNT = 35;
+let speedSparkles = [];
+let speedSparklePositions = [];
 
 let scoreSubmitted = false;
 let showingLeaderboard = false;
@@ -1637,6 +1725,9 @@ function update() {
     // Update trail positions
     updateTrailPositions();
 
+    // Update speed sparkles
+    updateSpeedSparkles();
+
     // Add this line to update sparkleTime
     sparkleTime += FIXED_DELTA_TIME;
 
@@ -1943,6 +2034,7 @@ function draw() {
 
     // Draw sparkles for characters with the sparkle effect
     drawSparkles();
+    drawSpeedSparkles();
 
     // Draw pipes
     pipes.forEach(pipe => {
