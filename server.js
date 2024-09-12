@@ -49,7 +49,7 @@ app.get('/api/leaderboard/:mode', async (req, res) => {
       const leaderboard = await collection.find({ mode })
           .sort({ score: -1 })
           .limit(10)
-          .project({ playerName: 1, score: 1, character: 1, _id: 0 })
+          .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
           .toArray();
       res.json(leaderboard);
   } catch (error) {
