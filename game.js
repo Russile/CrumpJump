@@ -166,8 +166,8 @@ function drawSparkles() {
             const ageRatio = sparkle.age / MAX_SPARKLE_COUNT;
             
             // Size calculation: start big, shrink faster, but never below minSize
-            const maxSize = 3;
-            const minSize = 0.5;
+            const maxSize = 3.5;
+            const minSize = 1; // Increased minimum size to ensure visibility
             const size = Math.max(minSize, maxSize - (maxSize - minSize) * ageRatio * speedFactor);
             
             // Color transition from purple to white (faster)
@@ -193,9 +193,21 @@ function drawSparkles() {
             if (size > 0) {
                 ctx.save();
                 ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-                ctx.beginPath();
-                ctx.arc(adjustedX, sparkle.y, size, 0, Math.PI * 2);
-                ctx.fill();
+                
+                // Move to the center of where we want to draw the sparkle
+                ctx.translate(Math.floor(adjustedX), Math.floor(sparkle.y));
+                
+                // Rotate the context
+                ctx.rotate(sparkle.rotation || (sparkle.rotation = Math.random() * Math.PI * 2));
+                
+                // Draw the rotated square
+                ctx.fillRect(
+                    Math.floor(-size / 2), 
+                    Math.floor(-size / 2), 
+                    Math.ceil(size), 
+                    Math.ceil(size)
+                );
+                
                 ctx.restore();
             }
         });
@@ -493,38 +505,36 @@ function displayLeaderboard(leaderboardData) {
     }
 
     // Draw a semi-transparent background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.97)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     // Draw leaderboard title with mode
     const titleText = `${currentLeaderboardMode} Mode`;
-    drawTextWithOutline(titleText, gameWidth / 2, 50, '#FFD700', 'black', 3, '36px', 'bold', 'center', 'middle');
+    drawTextWithOutline(titleText, gameWidth / 2, 40, '#FFD700', 'black', 3, '32px', 'bold', 'center', 'middle');
 
     // Draw leaderboard entries
-    let yPos = 100;
-    const imgSize = 40; // Adjust this value as needed
-    const haloSize = imgSize - 7; // Slightly smaller than the image
+    let yPos = 80; // Start a bit higher
+    const imgSize = 35; // Slightly smaller images
+    const haloSize = imgSize - 6; // Adjust halo size accordingly
     const haloColor = 'rgba(255, 255, 255, 0.2)'; // White with some transparency
 
-    leaderboardData.forEach((entry, index) => {
+    leaderboardData.slice(0, 10).forEach((entry, index) => { // Ensure we only show top 10
         // Format the date
         const date = new Date(entry.timestamp);
         const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
 
-        // Draw score, name, and date
-        const scoreText = `${index + 1}. ${entry.playerName}: ${entry.score}`;
-        drawTextWithOutline(scoreText, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        // Draw score and name
+        const scoreText = `${entry.playerName}: ${entry.score}`; 
+        drawTextWithOutline(scoreText, gameWidth / 2, yPos, 'white', 'black', 2, '22px', 'normal', 'center', 'middle');
         
-        // Draw date inline
-        const dateText = `${formattedDate}`;
-        const scoreWidth = ctx.measureText(scoreText).width;
-        drawTextWithOutline(dateText, gameWidth / 2 + scoreWidth / 2 + 5, yPos, 'yellow', 'black', 2, '14px', 'normal', 'left', 'middle');
+        // Draw date below the score and name
+        drawTextWithOutline(formattedDate, gameWidth / 2, yPos + 18, '#CCCCCC', 'black', 1, '12px', 'normal', 'center', 'middle');
         
         // Draw character image with halo
         const characterKey = entry.character || 'crump1';
         if (characterImages[characterKey]) {
             const img = characterImages[characterKey].up;
-            const imgX = gameWidth / 2 - 150;
+            const imgX = gameWidth / 2 - 140; // Moved slightly closer to center
             const imgY = yPos - imgSize / 2;
 
             // Draw halo
@@ -537,7 +547,7 @@ function displayLeaderboard(leaderboardData) {
             ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
         }
         
-        yPos += 40;
+        yPos += 40; // Reduced spacing between entries
     });
 }
 
@@ -1637,12 +1647,12 @@ function update() {
         
         // Add new sparkle only when the character has moved a certain distance
         if (sparklePositions.length === 0 || 
-            Math.abs(centerX - sparklePositions[0].x) > 5 || // Reduced from 10 to 5
-            Math.abs(centerY - sparklePositions[0].y) > 5) { // Reduced from 10 to 5
+            Math.abs(centerX - sparklePositions[0].x) > 4 || // Reduced to 4 for more frequent sparkles
+            Math.abs(centerY - sparklePositions[0].y) > 4) {
             sparklePositions.unshift({ 
-                x: centerX + (Math.random() - 0.5) * 10, // Add small random X offset
-                y: centerY + (Math.random() - 0.5) * 10, // Add small random Y offset
-                initialY: centerY + (Math.random() - 0.5) * 20, // Keep the random Y offset
+                x: centerX + Math.floor((Math.random() - 0.5) * 8), // Reduced range and floored
+                y: centerY + Math.floor((Math.random() - 0.5) * 8), // Reduced range and floored
+                initialY: centerY + Math.floor((Math.random() - 0.5) * 16), // Reduced range and floored
                 age: 0
             });
         }
@@ -2109,17 +2119,7 @@ function draw() {
     drawDebugInfo();
 
     if (showingLeaderboard && currentLeaderboardData) {
-
-
         displayLeaderboard(currentLeaderboardData);
-        // Draw leaderboard entries
-        let yPos = 100;
-        currentLeaderboardData.forEach((entry, index) => {
-            const text = `${index + 1}. ${entry.playerName}: ${entry.score}`;
-            drawTextWithOutline(text, gameWidth / 2, yPos, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
-            yPos += 40;
-        });
-
     }
 }
 
