@@ -1306,7 +1306,7 @@ function drawUnlockNotification() {
         const boxWidth = textWidth + padding * 2;
         const boxHeight = 40;
         const boxX = (gameWidth - boxWidth) / 2; // Center horizontally
-        const boxY = 10; // 10px from top
+        const boxY = gameHeight - boxHeight - 30; // 10px from bottom
 
         // Draw background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
