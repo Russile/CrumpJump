@@ -335,6 +335,7 @@ let bird = {
 };
 
 let pipes = [];
+let isFirstPipe = true;
 let score = 0;
 let normalModeHighScore = parseInt(localStorage.getItem('normalModeHighScore')) || 0;
 let hardModeHighScore = parseInt(localStorage.getItem('hardModeHighScore')) || 0;
@@ -1103,6 +1104,7 @@ function resetGame(startInHardMode = false) {
         rotation: 0
     };
     pipes = [];
+    isFirstPipe = true;
     score = 0;
     pipesPassed = 0;
     gameOver = false;
@@ -1148,41 +1150,47 @@ const MAX_VERTICAL_DISTANCE = 165; // Maximum vertical distance between consecut
 let lastPipeGapCenter = gameHeight / 2; // Initialize to middle of screen
 
 function createPipe() {
-    const gapHeight = hardModeActive ? 120 : 150; // Correct gap heights for each mode
-    const minGapTop = 50; // Minimum distance from top of screen
-    const maxGapBottom = gameHeight - 50; // Maximum distance from bottom of screen
-    
-    // Calculate the range for the new gap center
-    let minNewGapCenter = Math.max(lastPipeGapCenter - MAX_VERTICAL_DISTANCE, minGapTop + gapHeight / 2);
-    let maxNewGapCenter = Math.min(lastPipeGapCenter + MAX_VERTICAL_DISTANCE, maxGapBottom - gapHeight / 2);
-    
-    // Enforce MIN_VERTICAL_DISTANCE
-    const lowerBound = lastPipeGapCenter - MIN_VERTICAL_DISTANCE;
-    const upperBound = lastPipeGapCenter + MIN_VERTICAL_DISTANCE;
-    
-    // Determine the actual range for the new gap center
-    const actualMinGapCenter = Math.min(minNewGapCenter, lowerBound);
-    const actualMaxGapCenter = Math.max(maxNewGapCenter, upperBound);
+    const gapHeight = hardModeActive ? 120 : 150;
+    const minGapTop = 50;
+    const maxGapBottom = gameHeight - 50;
     
     let newGapCenter;
-    
-    if (actualMinGapCenter >= actualMaxGapCenter) {
-        // If there's no valid range, alternate above and below the last gap
-        const direction = Math.random() < 0.5 ? -1 : 1;
-        newGapCenter = lastPipeGapCenter + (direction * MIN_VERTICAL_DISTANCE);
-        console.warn("No valid range. Forced adjustment:", direction > 0 ? "up" : "down");
+
+    if (isFirstPipe) {
+        // Center the gap for the first pipe
+        newGapCenter = gameHeight / 2;
+        isFirstPipe = false; // Reset the flag
     } else {
-        // Generate new gap center, avoiding the exclusion zone
-        const lowerRange = lowerBound - actualMinGapCenter;
-        const upperRange = actualMaxGapCenter - upperBound;
-        const totalRange = lowerRange + upperRange;
+        // Existing logic for subsequent pipes
+        let minNewGapCenter = Math.max(lastPipeGapCenter - MAX_VERTICAL_DISTANCE, minGapTop + gapHeight / 2);
+        let maxNewGapCenter = Math.min(lastPipeGapCenter + MAX_VERTICAL_DISTANCE, maxGapBottom - gapHeight / 2);
         
-        if (Math.random() * totalRange < lowerRange) {
-            // Choose from lower range
-            newGapCenter = actualMinGapCenter + (Math.random() * lowerRange);
+        // Enforce MIN_VERTICAL_DISTANCE
+        const lowerBound = lastPipeGapCenter - MIN_VERTICAL_DISTANCE;
+        const upperBound = lastPipeGapCenter + MIN_VERTICAL_DISTANCE;
+        
+        // Determine the actual range for the new gap center
+        const actualMinGapCenter = Math.min(minNewGapCenter, lowerBound);
+        const actualMaxGapCenter = Math.max(maxNewGapCenter, upperBound);
+        
+        if (actualMinGapCenter >= actualMaxGapCenter) {
+            // If there's no valid range, alternate above and below the last gap
+            const direction = Math.random() < 0.5 ? -1 : 1;
+            newGapCenter = lastPipeGapCenter + (direction * MIN_VERTICAL_DISTANCE);
+            console.warn("No valid range. Forced adjustment:", direction > 0 ? "up" : "down");
         } else {
-            // Choose from upper range
-            newGapCenter = upperBound + (Math.random() * upperRange);
+            // Generate new gap center, avoiding the exclusion zone
+            const lowerRange = lowerBound - actualMinGapCenter;
+            const upperRange = actualMaxGapCenter - upperBound;
+            const totalRange = lowerRange + upperRange;
+            
+            if (Math.random() * totalRange < lowerRange) {
+                // Choose from lower range
+                newGapCenter = actualMinGapCenter + (Math.random() * lowerRange);
+            } else {
+                // Choose from upper range
+                newGapCenter = upperBound + (Math.random() * upperRange);
+            }
         }
     }
     
