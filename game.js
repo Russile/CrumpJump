@@ -336,6 +336,8 @@ let bird = {
 
 let pipes = [];
 let isFirstPipe = true;
+let currentPipeImageIndex = 0;
+let pipeCounter = 0;
 let score = 0;
 let normalModeHighScore = parseInt(localStorage.getItem('normalModeHighScore')) || 0;
 let hardModeHighScore = parseInt(localStorage.getItem('hardModeHighScore')) || 0;
@@ -1105,6 +1107,8 @@ function resetGame(startInHardMode = false) {
     };
     pipes = [];
     isFirstPipe = true;
+    currentPipeImageIndex = 0;
+    pipeCounter = 0;
     score = 0;
     pipesPassed = 0;
     gameOver = false;
@@ -1202,6 +1206,12 @@ function createPipe() {
     
     const topHeight = newGapCenter - gapHeight / 2;
     
+    // Cycle through pipe images every 5 pipes
+    if (pipeCounter % 5 === 0) {
+        currentPipeImageIndex = (currentPipeImageIndex + 1) % pipeImgs.length;
+    }
+    pipeCounter++;
+    
     return {
         x: gameWidth,
         y: topHeight + gapHeight,
@@ -1209,7 +1219,7 @@ function createPipe() {
         topHeight: topHeight,
         bottomY: topHeight + gapHeight,
         passed: false,
-        img: pipeImgs[Math.floor(Math.random() * pipeImgs.length)]
+        img: pipeImgs[currentPipeImageIndex]
     };
 }
 
