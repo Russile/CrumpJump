@@ -2449,6 +2449,7 @@ hardModeUnlocked = localStorage.getItem('hardModeUnlocked') === 'true';
 resetGame();
 
 // Developer tools
+/*
 window.devTools = {
     resetHighScore: function() {
         normalModeHighScore = 0;
@@ -2470,6 +2471,7 @@ window.devTools = {
         toggleDebugMode();
     }
 };
+*/
 
 function drawDebugInfo() {
     if (!debugMode) return;
