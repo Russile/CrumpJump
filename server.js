@@ -28,10 +28,18 @@ connectToDatabase();
 // Submit score
 app.post('/api/scores', async (req, res) => {
   try {
-      const { playerName, score, mode, character } = req.body;
+      const { playerName, score, mode, character, configurationId, pipeConfiguration } = req.body;
       
       if (score > 1) {
-          await collection.insertOne({ playerName, score, mode, character, timestamp: new Date() });
+          await collection.insertOne({ 
+              playerName, 
+              score, 
+              mode, 
+              character, 
+              configurationId,
+              pipeConfiguration, // Store the full configuration
+              timestamp: new Date() 
+          });
           res.status(201).json({ message: 'Score submitted successfully' });
       } else {
           res.status(400).json({ message: 'Score must be greater than 1' });
@@ -42,15 +50,31 @@ app.post('/api/scores', async (req, res) => {
   }
 });
 
-// Get leaderboard
-app.get('/api/leaderboard/:mode', async (req, res) => {
+// Get leaderboard (handles both overall and weekly, and supports old client requests)
+app.get('/api/leaderboard/:mode/:type?', async (req, res) => {
   try {
-      const { mode } = req.params;
-      const leaderboard = await collection.find({ mode })
-          .sort({ score: -1 })
+      const { mode, type } = req.params;
+      let query = { mode };
+      let sort = { score: -1 };
+
+      // If type is not provided (old client request), default to overall
+      const leaderboardType = type || 'overall';
+
+      if (leaderboardType === 'weekly') {
+          // Calculate the start of the current week (Sunday)
+          const startOfWeek = new Date();
+          startOfWeek.setHours(0, 0, 0, 0);
+          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+          query.timestamp = { $gte: startOfWeek };
+      }
+
+      const leaderboard = await collection.find(query)
+          .sort(sort)
           .limit(10)
           .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
           .toArray();
+
       res.json(leaderboard);
   } catch (error) {
       console.error('Error fetching leaderboard:', error);
