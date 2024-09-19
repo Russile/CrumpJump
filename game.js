@@ -617,6 +617,15 @@ function displayLeaderboard(leaderboardData) {
         return;
     }
 
+    // Sort the leaderboard data
+    leaderboardData.sort((a, b) => {
+        if (b.score !== a.score) {
+            return b.score - a.score; // Higher score first
+        }
+        // If scores are tied, sort by oldest timestamp first
+        return new Date(a.timestamp) - new Date(b.timestamp);
+    });
+
     ctx.fillStyle = 'rgba(0, 0, 0, 0.97)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
@@ -628,7 +637,7 @@ function displayLeaderboard(leaderboardData) {
     const haloSize = imgSize - 6;
     const haloColor = 'rgba(255, 255, 255, 0.2)';
 
-    leaderboardData.slice(0, 10).forEach((entry) => {
+    leaderboardData.slice(0, 10).forEach((entry, index) => {
         const date = new Date(entry.timestamp);
         const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
 
@@ -640,7 +649,7 @@ function displayLeaderboard(leaderboardData) {
         const characterKey = entry.character || 'crump1';
         if (characterImages[characterKey]) {
             const img = characterImages[characterKey].up;
-            const imgX = gameWidth / 2 - 140; // Moved 20 pixels to the right
+            const imgX = gameWidth / 2 - 140;
             const imgY = yPos - imgSize / 2;
 
             ctx.beginPath();
@@ -2002,6 +2011,10 @@ function gameLoop(currentTime) {
 // Load title logo image
 const titleLogoImg = new Image();
 titleLogoImg.src = 'crumpjump_title_logo.png';
+
+// Leaderboard crown image
+const crownImage = new Image();
+crownImage.src = 'assets/extra/crump_crown.png';
 
 // Draw game elements
 function draw() {
