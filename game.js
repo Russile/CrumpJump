@@ -192,49 +192,23 @@ function updateSpeedSparkles() {
 
 function drawSpeedSparkles() {
     if (score >= 15 && characterEffects[gameplayCharacter]?.speedSparkle) {
-        // Calculate speed factor based on pipe speed
-        const baseSpeed = INITIAL_PIPE_SPEED;
-        const speedFactor = pipeSpeed / baseSpeed;
+        const speedFactor = pipeSpeed / INITIAL_PIPE_SPEED;
         
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Common fill style
+        ctx.save(); // Save once before the loop
+
         speedSparklePositions.forEach((sparkle) => {
             const ageRatio = sparkle.age / MAX_SPEED_SPARKLE_COUNT;
-            
-            // Size calculation: start big, shrink faster, but never below minSize
-            const maxSize = 3;
-            const minSize = 1;
-            const size = Math.max(minSize, maxSize - (maxSize - minSize) * ageRatio * speedFactor);
-            
-            // Opacity calculation (slower fade out)
-            const opacityFadeStart = 0.3;
-            let opacity;
-            if (ageRatio < opacityFadeStart) {
-                opacity = 0.5;
-            } else {
-                opacity = 0.5 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
-            }
+            const size = Math.max(1, 3 - (3 - 1) * ageRatio * speedFactor);
+            const opacity = Math.max(0, 1 - ageRatio * 1.2); // Starts at 1 (full opacity) and fades out
 
-            // Only draw if size is positive
             if (size > 0) {
-                ctx.save();
-                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; // White color with fading opacity
-                
-                // Use the sparkle's x and y directly
-                ctx.translate(Math.floor(sparkle.x), Math.floor(sparkle.y));
-                
-                // Rotate the context
-                ctx.rotate(sparkle.rotation);
-                
-                // Draw the rotated square
-                ctx.fillRect(
-                    Math.floor(-size / 2), 
-                    Math.floor(-size / 2), 
-                    Math.ceil(size), 
-                    Math.ceil(size)
-                );
-                
-                ctx.restore();
+                ctx.globalAlpha = opacity;
+                ctx.fillRect(sparkle.x - size / 2, sparkle.y - size / 2, size, size);
             }
         });
+
+        ctx.restore(); // Restore once after the loop
     }
 }
 
@@ -1496,8 +1470,6 @@ function showUnlockMessage(character) {
 const FIXED_DELTA_TIME = 1 / 60; // 60 FPS logic update
 let lastUpdateTime = 0;
 
-
-
 // Add these variables at the top of your file
 let showingUnlockPopup = false;
 
@@ -1957,9 +1929,10 @@ function update() {
 
     // Bird rotation
     if (bird.velocity < 0) {
-        bird.rotation = -0.3; // Rotate slightly upwards when jumping
+        bird.rotation = -0.3; // Fixed rotation
     } else {
-        bird.rotation = Math.min(Math.PI / 6, bird.rotation + 0.05); // Gradually rotate downwards, max 30 degrees
+        bird.rotation += 0.05; // Increment rotation
+        if (bird.rotation > Math.PI / 6) bird.rotation = Math.PI / 6; // Clamp rotation
     }
 
     // Update background position
@@ -2041,30 +2014,18 @@ function update() {
 
 function gameLoop(currentTime) {
     if (!isModalOpen) {
-    // Update game state at a fixed time step
-    while (currentTime - lastUpdateTime >= FIXED_DELTA_TIME * 1000) {
-        update();
-        lastUpdateTime += FIXED_DELTA_TIME * 1000;
-    }
+        while (currentTime - lastUpdateTime >= FIXED_DELTA_TIME * 1000) {
+            update();
+            lastUpdateTime += FIXED_DELTA_TIME * 1000;
+        }
         draw();
     }
     requestAnimationFrame(gameLoop);
-
-    // Update game state at a fixed time step
-    while (currentTime - lastUpdateTime >= FIXED_DELTA_TIME * 1000) {
-        update();
-        lastUpdateTime += FIXED_DELTA_TIME * 1000;
-    }
-
 }
 
 // Load title logo image
 const titleLogoImg = new Image();
 titleLogoImg.src = 'crumpjump_title_logo.png';
-
-// Leaderboard crown image
-const crownImage = new Image();
-crownImage.src = 'assets/extra/crump_crown.png';
 
 // Draw game elements
 function draw() {
