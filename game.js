@@ -784,7 +784,7 @@ function drawCharacterSelection(x, y, width, height, characterToShow = null) {
 function drawCurrentUsername() {
     const username = localStorage.getItem('username') || 'No Username';
     const text = `${username}`;
-    const yPosition = gameHeight - 15;
+    const yPosition = gameHeight - 20;
     const xPosition = gameWidth / 2;
     const fontSize = 20; // Set the desired font size here
 
@@ -977,7 +977,7 @@ function handlePointerEvent(event) {
         // Check if the edit username button was clicked
         const username = localStorage.getItem('username') || 'No Username';
         const fontSize = 20; // Match the font size in drawCurrentUsername
-        const yPosition = gameHeight - 15;
+        const yPosition = gameHeight - 20;
         const xPosition = gameWidth / 2;
 
         ctx.font = `${fontSize}px ${GAME_FONT}`;
