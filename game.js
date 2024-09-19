@@ -786,14 +786,14 @@ function drawCurrentUsername() {
     const text = `${username}`;
     const yPosition = gameHeight - 15;
     const xPosition = gameWidth / 2;
-    const fontSize = 16; // Set the desired font size here
+    const fontSize = 20; // Set the desired font size here
 
     // Calculate text width using the correct font size
     ctx.font = `${fontSize}px ${GAME_FONT}`;
     const textWidth = ctx.measureText(text).width;
 
     // Draw edit symbol (pencil icon)
-    const editSymbolSize = 12;
+    const editSymbolSize = 16;
     const editSymbolX = xPosition - textWidth / 2 - editSymbolSize; // Move it closer to the text
     const editSymbolY = yPosition;
     
@@ -802,7 +802,7 @@ function drawCurrentUsername() {
     ctx.fillText('✎', editSymbolX, editSymbolY);
 
     // Draw username
-    drawTextWithOutline(text, xPosition, yPosition, 'white', 'black', 2, `16px`, 'normal', 'center', 'middle');
+    drawTextWithOutline(text, xPosition, yPosition, 'white', 'black', 2, `20px`, 'normal', 'center', 'middle');
 }
 
 function updateTrailPositions() {
@@ -976,21 +976,21 @@ function handlePointerEvent(event) {
 
         // Check if the edit username button was clicked
         const username = localStorage.getItem('username') || 'No Username';
-        const fontSize = 16; // Match the font size in drawCurrentUsername
+        const fontSize = 20; // Match the font size in drawCurrentUsername
         const yPosition = gameHeight - 15;
         const xPosition = gameWidth / 2;
 
         ctx.font = `${fontSize}px ${GAME_FONT}`;
         const textWidth = ctx.measureText(username).width;
 
-        const editSymbolSize = 12;
+        const editSymbolSize = 16;
         const editSymbolX = xPosition - textWidth / 2 - editSymbolSize;
         const editSymbolY = yPosition;
 
         // Increase the tap area for better usability
         const tapAreaSize = editSymbolSize * 2;
         if (isTapWithinButton(tapX, tapY, editSymbolX - tapAreaSize/2, editSymbolY - tapAreaSize/2, tapAreaSize, tapAreaSize)) {
-            showNameInputModal(username, 'Edit Username', 'Enter new username:')
+            showNameInputModal(username, 'Choose Username', '')
                 .then(newUsername => {
                     if (newUsername) {
                         localStorage.setItem('username', newUsername);
