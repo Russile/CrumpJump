@@ -659,14 +659,16 @@ function displayLeaderboard(leaderboardData) {
 }
 
 function drawLeaderboardArrows() {
-    const arrowWidth = 8;  // Reduced from 10
-    const arrowHeight = 8;  // Reduced from 10
+    const arrowWidth = 8;
+    const arrowHeight = 8;
     const leftArrowX = 110;
     const rightArrowX = gameWidth - arrowWidth - 110;
-    const arrowY = 40;  // Reduced from 60 to move it up
+    const arrowY = 40;
+
+    const lightBlueColor = '#4169E1'; // Deep Sky Blue
 
     // Draw left arrow
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = lightBlueColor;
     ctx.beginPath();
     ctx.moveTo(leftArrowX + arrowWidth, arrowY);
     ctx.lineTo(leftArrowX, arrowY + arrowHeight / 2);
@@ -684,7 +686,7 @@ function drawLeaderboardArrows() {
 
     // Draw leaderboard type in ALL CAPS
     const typeText = currentLeaderboardType.toUpperCase();
-    drawTextWithOutline(typeText, gameWidth / 2, arrowY + arrowHeight / 2, 'white', 'black', 2, '24px', 'bold', 'center', 'middle');  // Reduced font size from 24px to 20px
+    drawTextWithOutline(typeText, gameWidth / 2, arrowY + arrowHeight / 2, lightBlueColor, 'black', 2, '24px', 'bold', 'center', 'middle');
 }
 
 function handleLeaderboardClick(x, y) {
