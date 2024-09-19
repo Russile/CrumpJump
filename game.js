@@ -807,6 +807,30 @@ function drawCharacterSelection(x, y, width, height, characterToShow = null) {
     }
 }
 
+function drawCurrentUsername() {
+    const username = localStorage.getItem('username') || 'No Username';
+    const text = `${username}`;
+    const yPosition = gameHeight - 15;
+    const xPosition = gameWidth / 2;
+    const fontSize = 16; // Set the desired font size here
+
+    // Calculate text width using the correct font size
+    ctx.font = `${fontSize}px ${GAME_FONT}`;
+    const textWidth = ctx.measureText(text).width;
+
+    // Draw edit symbol (pencil icon)
+    const editSymbolSize = 12;
+    const editSymbolX = xPosition - textWidth / 2 - editSymbolSize; // Move it closer to the text
+    const editSymbolY = yPosition;
+    
+    ctx.fillStyle = 'white';
+    ctx.font = `${editSymbolSize}px ${GAME_FONT}`;
+    ctx.fillText('✎', editSymbolX, editSymbolY);
+
+    // Draw username
+    drawTextWithOutline(text, xPosition, yPosition, 'white', 'black', 2, `16px`, 'normal', 'center', 'middle');
+}
+
 function updateTrailPositions() {
     // Calculate the center of the bird
     const centerX = bird.x + bird.width / 2;
@@ -973,6 +997,32 @@ function handlePointerEvent(event) {
         const leaderboardButtonY = gameHeight * 0.4; // Match the new position
         if (isTapWithinButton(tapX, tapY, leaderboardButtonX, leaderboardButtonY, leaderboardButtonWidth, leaderboardButtonHeight)) {
             showLeaderboard();
+            return;
+        }
+
+        // Check if the edit username button was clicked
+        const username = localStorage.getItem('username') || 'No Username';
+        const fontSize = 16; // Match the font size in drawCurrentUsername
+        const yPosition = gameHeight - 15;
+        const xPosition = gameWidth / 2;
+
+        ctx.font = `${fontSize}px ${GAME_FONT}`;
+        const textWidth = ctx.measureText(username).width;
+
+        const editSymbolSize = 12;
+        const editSymbolX = xPosition - textWidth / 2 - editSymbolSize;
+        const editSymbolY = yPosition;
+
+        // Increase the tap area for better usability
+        const tapAreaSize = editSymbolSize * 2;
+        if (isTapWithinButton(tapX, tapY, editSymbolX - tapAreaSize/2, editSymbolY - tapAreaSize/2, tapAreaSize, tapAreaSize)) {
+            showNameInputModal(username, 'Edit Username', 'Enter new username:')
+                .then(newUsername => {
+                    if (newUsername) {
+                        localStorage.setItem('username', newUsername);
+                        draw(); // Redraw to show updated username
+                    }
+                });
             return;
         }
     }
@@ -2071,6 +2121,9 @@ function draw() {
             ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
         }
 
+        // Draw current username
+        drawCurrentUsername();
+
         // Draw debug mode indicator and "Reset All" button if debug mode is active
         if (debugMode) {
             // Draw debug mode indicator
@@ -2280,8 +2333,18 @@ function draw() {
         drawTextWithOutline(`Score: ${score}`, gameWidth / 2, gameHeight * 0.3, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
         drawTextWithOutline(`High Score: ${currentHighScore}`, gameWidth / 2, gameHeight * 0.35, '#FFFFFF', 'black', 2, '32px', 'normal', 'center', 'middle');
 
+        // Draw current username
+        drawCurrentUsername();
+
         // Draw question mark (moved outside the gameOver condition)
         drawQuestionMark();
+
+        // Draw "Leaderboard" button (white background, black text)
+        const leaderboardButtonWidth = 120;
+        const leaderboardButtonHeight = 25;
+        const leaderboardButtonX = (gameWidth - leaderboardButtonWidth) / 2;
+        const leaderboardButtonY = gameHeight * 0.4;
+        drawButton(leaderboardButtonX, leaderboardButtonY, leaderboardButtonWidth, leaderboardButtonHeight, 'Leaderboard', '#FFFFFF', '#000000', '18px');
 
         const elapsedTime = Date.now() - gameOverTime;
         if (elapsedTime < GAME_OVER_DELAY) {
@@ -2314,13 +2377,6 @@ function draw() {
                 // Draw "Hard Mode" button
                 ctx.drawImage(hardModeActiveImg, buttonX, hardModeButtonY, buttonWidth, buttonHeight);
             }
-
-            // Draw "Leaderboard" button (white background, black text)
-            const leaderboardButtonWidth = 120;
-            const leaderboardButtonHeight = 25;
-            const leaderboardButtonX = (gameWidth - leaderboardButtonWidth) / 2;
-            const leaderboardButtonY = gameHeight * 0.4;
-            drawButton(leaderboardButtonX, leaderboardButtonY, leaderboardButtonWidth, leaderboardButtonHeight, 'Leaderboard', '#FFFFFF', '#000000', '18px');
         }
 
         ctx.textAlign = 'left';
