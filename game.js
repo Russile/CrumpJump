@@ -383,6 +383,7 @@ let scoreSubmitted = false;
 let showingLeaderboard = false;
 let currentLeaderboardData = null;
 let currentLeaderboardMode = '';
+let currentLeaderboardType = 'overall'; // 'overall' or 'weekly'
 let isModalOpen = false;
 
 
@@ -400,11 +401,21 @@ const pipeImgs = [
 });
 
 
-function showLeaderboard() {
-    console.log("Showing leaderboard...");
+async function showLeaderboard() {
+    console.log('Showing leaderboard');
     showingLeaderboard = true;
     const mode = hardModeActive ? 'Hard' : 'Normal';
-    fetchLeaderboard(mode);
+    currentLeaderboardMode = mode;
+    console.log(`Fetching ${currentLeaderboardType} leaderboard for ${mode} mode`);
+    try {
+        const leaderboardData = await fetchLeaderboard(mode);
+        console.log('Leaderboard data:', leaderboardData);
+        currentLeaderboardData = leaderboardData;
+        displayLeaderboard(currentLeaderboardData);
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        displayLeaderboard([]); // This will trigger the "No leaderboard data available" message
+    }
 }
 
 function sanitizeInput(input) {
@@ -573,76 +584,135 @@ initGame();
 
 async function fetchLeaderboard(mode) {
     try {
-        console.log(`Fetching leaderboard for ${mode} mode...`);
-        const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
+        const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}/${currentLeaderboardType}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const leaderboard = await response.json();
-        console.log("Leaderboard data received:", leaderboard);
-        currentLeaderboardData = leaderboard;
-        currentLeaderboardMode = mode;
-        showingLeaderboard = true;
-        draw();  // Redraw to show the leaderboard
+        const data = await response.json();
+        return data;
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
-        showingLeaderboard = false;
-        currentLeaderboardData = null;
-        currentLeaderboardMode = '';
+        throw error;
     }
 }
-  
+
 function displayLeaderboard(leaderboardData) {
     if (!leaderboardData || leaderboardData.length === 0) {
-        drawTextWithOutline('No leaderboard data available', gameWidth / 2, gameHeight / 2, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        // Switch back to the OVERALL leaderboard type
+        if (currentLeaderboardType !== 'overall') {
+            currentLeaderboardType = 'overall';
+            
+            // Show an error message
+            drawTextWithOutline('No leaderboard data available', gameWidth / 2, gameHeight / 2 - 20, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+            drawTextWithOutline('Switching back to OVERALL', gameWidth / 2, gameHeight / 2 + 20, 'white', 'black', 2, '18px', 'normal', 'center', 'middle');
+            
+            // Fetch the OVERALL leaderboard data after a short delay
+            setTimeout(() => {
+                showLeaderboard();
+            }, 2000);
+        } else {
+            // If we're already on OVERALL, just show the error message
+            drawTextWithOutline('No leaderboard data available', gameWidth / 2, gameHeight / 2, 'white', 'black', 2, '24px', 'normal', 'center', 'middle');
+        }
         return;
     }
 
-    // Draw a semi-transparent background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.97)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
-    // Draw leaderboard title with mode
-    const titleText = `${currentLeaderboardMode} Mode`;
-    drawTextWithOutline(titleText, gameWidth / 2, 40, '#FFD700', 'black', 3, '32px', 'bold', 'center', 'middle');
+    const titleText = `${currentLeaderboardMode.toUpperCase()} MODE`;
+    drawTextWithOutline(titleText, gameWidth / 2, 15, '#FFD700', 'black', 3, '32px', 'bold', 'center', 'middle');
 
-    // Draw leaderboard entries
-    let yPos = 80; // Start a bit higher
-    const imgSize = 35; // Slightly smaller images
-    const haloSize = imgSize - 6; // Adjust halo size accordingly
-    const haloColor = 'rgba(255, 255, 255, 0.2)'; // White with some transparency
+    let yPos = 70;
+    const imgSize = 35;
+    const haloSize = imgSize - 6;
+    const haloColor = 'rgba(255, 255, 255, 0.2)';
 
-    leaderboardData.slice(0, 10).forEach((entry, index) => { // Ensure we only show top 10
-        // Format the date
+    leaderboardData.slice(0, 10).forEach((entry) => {
         const date = new Date(entry.timestamp);
         const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
 
-        // Draw score and name
-        const scoreText = `${entry.playerName}: ${entry.score}`; 
+        const scoreText = `${entry.playerName}: ${entry.score}`;
         drawTextWithOutline(scoreText, gameWidth / 2, yPos, 'white', 'black', 2, '22px', 'normal', 'center', 'middle');
-        
-        // Draw date below the score and name
-        drawTextWithOutline(formattedDate, gameWidth / 2, yPos + 18, '#CCCCCC', 'black', 1, '12px', 'normal', 'center', 'middle');
-        
-        // Draw character image with halo
+
+        drawTextWithOutline(formattedDate, gameWidth / 2, yPos + 20, '#CCCCCC', 'black', 1, '14px', 'normal', 'center', 'middle');
+
         const characterKey = entry.character || 'crump1';
         if (characterImages[characterKey]) {
             const img = characterImages[characterKey].up;
-            const imgX = gameWidth / 2 - 140; // Moved slightly closer to center
+            const imgX = gameWidth / 2 - 140; // Moved 20 pixels to the right
             const imgY = yPos - imgSize / 2;
 
-            // Draw halo
             ctx.beginPath();
             ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, haloSize / 2, 0, Math.PI * 2);
             ctx.fillStyle = haloColor;
             ctx.fill();
 
-            // Draw character image
             ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
         }
-        
-        yPos += 40; // Reduced spacing between entries
+
+        yPos += 42;
     });
+
+    // Draw arrows for toggling between overall and weekly
+    drawLeaderboardArrows();
+}
+
+function drawLeaderboardArrows() {
+    const arrowWidth = 8;  // Reduced from 10
+    const arrowHeight = 8;  // Reduced from 10
+    const leftArrowX = 110;
+    const rightArrowX = gameWidth - arrowWidth - 110;
+    const arrowY = 40;  // Reduced from 60 to move it up
+
+    // Draw left arrow
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.moveTo(leftArrowX + arrowWidth, arrowY);
+    ctx.lineTo(leftArrowX, arrowY + arrowHeight / 2);
+    ctx.lineTo(leftArrowX + arrowWidth, arrowY + arrowHeight);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw right arrow
+    ctx.beginPath();
+    ctx.moveTo(rightArrowX, arrowY);
+    ctx.lineTo(rightArrowX + arrowWidth, arrowY + arrowHeight / 2);
+    ctx.lineTo(rightArrowX, arrowY + arrowHeight);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw leaderboard type in ALL CAPS
+    const typeText = currentLeaderboardType.toUpperCase();
+    drawTextWithOutline(typeText, gameWidth / 2, arrowY + arrowHeight / 2, 'white', 'black', 2, '24px', 'bold', 'center', 'middle');  // Reduced font size from 24px to 20px
+}
+
+function handleLeaderboardClick(x, y) {
+    const arrowWidth = 8;
+    const arrowHeight = 8;
+    const leftArrowX = 110;
+    const rightArrowX = gameWidth - arrowWidth - 110;
+    const arrowY = 40;
+
+    // Increase the tap area for better usability
+    const tapAreaSize = 30;
+    const leftTapX = leftArrowX - (tapAreaSize - arrowWidth) / 2;
+    const rightTapX = rightArrowX - (tapAreaSize - arrowWidth) / 2;
+    const tapY = arrowY - (tapAreaSize - arrowHeight) / 2;
+
+    if (isTapWithinButton(x, y, leftTapX, tapY, tapAreaSize, tapAreaSize) ||
+        isTapWithinButton(x, y, rightTapX, tapY, tapAreaSize, tapAreaSize)) {
+        // Toggle leaderboard type
+        currentLeaderboardType = currentLeaderboardType === 'overall' ? 'weekly' : 'overall';
+        showLeaderboard();
+    } else {
+        // If clicked outside the arrows, close the leaderboard
+        showingLeaderboard = false;
+        currentLeaderboardData = null;
+        currentLeaderboardMode = '';
+        draw(); // Redraw the game screen
+        showCursor();
+    }
 }
 
 function drawCharacterSelection(x, y, width, height, characterToShow = null) {
@@ -832,6 +902,12 @@ function handlePointerEvent(event) {
     tapX = (tapX - rect.left) * scaleX;
     tapY = (tapY - rect.top) * scaleY;
    
+    // Check if leaderboard is showing and handle it first
+    if (showingLeaderboard) {
+        handleLeaderboardClick(tapX, tapY);
+        return;
+    }
+
     // Check if instructions are showing
     if (showingInstructions) {
         showingInstructions = false;
@@ -954,15 +1030,6 @@ function handlePointerEvent(event) {
         showCursor(); // Ensure cursor is visible on start and game over screens
     } else {
         hideCursor(); // Hide cursor during gameplay
-    }
-
-    if (showingLeaderboard) {
-        showingLeaderboard = false;
-        currentLeaderboardData = null;
-        currentLeaderboardMode = '';
-        draw(); // Redraw the game screen
-        showCursor();
-        return;
     }
 }
 
