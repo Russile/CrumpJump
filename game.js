@@ -327,6 +327,9 @@ const MAX_SPEED = 10; // Maximum speed
 const INITIAL_PIPE_SPEED = 2; // Initial pipe speed
 const INITIAL_BACKGROUND_SPEED = 1; // Initial background speed
 const PIPE_SPACING = 200; // Desired horizontal spacing between pipes in pixels
+const MIN_VERTICAL_DISTANCE = 20;
+const MAX_VERTICAL_DISTANCE = 165;
+const MAX_SPIKE_DISTANCE = 100;
 let lastPipeSpawnX = gameWidth;
 
 // Boost variables
@@ -1228,10 +1231,7 @@ function resetGame(startInHardMode = false) {
     }
 }
 
-const MIN_VERTICAL_DISTANCE = 20; // Minimum vertical distance between consecutive gaps
-const MAX_VERTICAL_DISTANCE = 165; // Maximum vertical distance between consecutive gaps
-
-let lastPipeGapCenter = gameHeight / 2; // Initialize to middle of screen
+let lastTwoPipeGapCenters = [gameHeight / 2, gameHeight / 2];
 
 function createPipe() {
     const gapHeight = hardModeActive ? 120 : 150;
@@ -1241,62 +1241,43 @@ function createPipe() {
     let newGapCenter;
 
     if (isFirstPipe) {
-        // Center the gap for the first pipe
         newGapCenter = gameHeight / 2;
-        isFirstPipe = false; // Reset the flag
+        isFirstPipe = false;
     } else {
-        // Existing logic for subsequent pipes
-        let minNewGapCenter = Math.max(lastPipeGapCenter - MAX_VERTICAL_DISTANCE, minGapTop + gapHeight / 2);
-        let maxNewGapCenter = Math.min(lastPipeGapCenter + MAX_VERTICAL_DISTANCE, maxGapBottom - gapHeight / 2);
+        const [secondLastGap, lastGap] = lastTwoPipeGapCenters;
         
-        // Enforce MIN_VERTICAL_DISTANCE
-        const lowerBound = lastPipeGapCenter - MIN_VERTICAL_DISTANCE;
-        const upperBound = lastPipeGapCenter + MIN_VERTICAL_DISTANCE;
+        const minNewGapCenter = Math.max(lastGap - MAX_VERTICAL_DISTANCE, minGapTop + gapHeight / 2);
+        let maxNewGapCenter = Math.min(lastGap + MAX_VERTICAL_DISTANCE, maxGapBottom - gapHeight / 2);
+
+        // Check and adjust for low-high-low sequence
+        if (lastGap < secondLastGap && (secondLastGap - lastGap) > MAX_SPIKE_DISTANCE) {
+            maxNewGapCenter = Math.min(maxNewGapCenter, secondLastGap - MAX_SPIKE_DISTANCE);
+        }
+
+        // Generate new gap center
+        newGapCenter = minNewGapCenter + Math.random() * (maxNewGapCenter - minNewGapCenter);
         
-        // Determine the actual range for the new gap center
-        const actualMinGapCenter = Math.min(minNewGapCenter, lowerBound);
-        const actualMaxGapCenter = Math.max(maxNewGapCenter, upperBound);
-        
-        if (actualMinGapCenter >= actualMaxGapCenter) {
-            // If there's no valid range, alternate above and below the last gap
-            const direction = Math.random() < 0.5 ? -1 : 1;
-            newGapCenter = lastPipeGapCenter + (direction * MIN_VERTICAL_DISTANCE);
-            console.warn("No valid range. Forced adjustment:", direction > 0 ? "up" : "down");
-        } else {
-            // Generate new gap center, avoiding the exclusion zone
-            const lowerRange = lowerBound - actualMinGapCenter;
-            const upperRange = actualMaxGapCenter - upperBound;
-            const totalRange = lowerRange + upperRange;
-            
-            if (Math.random() * totalRange < lowerRange) {
-                // Choose from lower range
-                newGapCenter = actualMinGapCenter + (Math.random() * lowerRange);
-            } else {
-                // Choose from upper range
-                newGapCenter = upperBound + (Math.random() * upperRange);
-            }
+        // Ensure minimum vertical distance
+        if (Math.abs(newGapCenter - lastGap) < MIN_VERTICAL_DISTANCE) {
+            newGapCenter = lastGap + (newGapCenter > lastGap ? MIN_VERTICAL_DISTANCE : -MIN_VERTICAL_DISTANCE);
         }
     }
     
-    // Clamp to ensure we're within screen bounds
-    newGapCenter = Math.max(minGapTop + gapHeight / 2, Math.min(newGapCenter, maxGapBottom - gapHeight / 2));
-
-    // Update lastPipeGapCenter for next pipe
-    lastPipeGapCenter = newGapCenter;
+    // Update lastTwoPipeGapCenters
+    lastTwoPipeGapCenters = [lastTwoPipeGapCenters[1], newGapCenter];
     
     const topHeight = newGapCenter - gapHeight / 2;
     
-    // Cycle through pipe images every 5 pipes
-    if (pipeCounter % 5 === 0) {
+    // Update pipe image every 5 pipes
+    if (++pipeCounter % 5 === 0) {
         currentPipeImageIndex = (currentPipeImageIndex + 1) % pipeImgs.length;
     }
-    pipeCounter++;
     
     return {
         x: gameWidth,
         y: topHeight + gapHeight,
         width: 50,
-        topHeight: topHeight,
+        topHeight,
         bottomY: topHeight + gapHeight,
         passed: false,
         img: pipeImgs[currentPipeImageIndex]
@@ -2495,25 +2476,26 @@ function drawDebugInfo() {
     // Draw debug mode indicator
     drawTextWithOutline('Debug Mode', 10, 30, '#4CAF50', 'black', 2, '20px', 'bold', 'left', 'top');
 
-    // Diagnostic information
-    let yPos = 60;
-    [
-        `Score: ${score}`,
-        `High Score: ${hardModeActive ? hardModeHighScore : normalModeHighScore}`,
-        `Background X: ${backgroundX.toFixed(2)}`,
-        `Bird Y: ${bird.y.toFixed(2)}`,
-        `Bird Velocity: ${bird.velocity.toFixed(2)}`,
-        `Pipes: ${pipes.length}`,
-        `Pipes Passed: ${pipesPassed}`,
-        `Pipe Speed: ${pipeSpeed.toFixed(2)}`,
-        `Frame Count: ${frameCount}`,
-        `Boosting: ${boosting}`,
-        `Boost Level: ${boostLevel}`,  // Add this line
-        pipes.length > 0 ? `First Pipe X: ${pipes[0].x.toFixed(2)}` : ''
-    ].forEach(text => {
-        drawTextWithOutline(text, 10, yPos, 'white', 'black', 2, '16px');
-        yPos += 25;
-    });
+// Diagnostic information
+let yPos = 60;
+[
+    `Score: ${score}`,
+    `High Score: ${hardModeActive ? hardModeHighScore : normalModeHighScore}`,
+    `Background X: ${backgroundX.toFixed(2)}`,
+    `Background Speed: ${backgroundSpeed.toFixed(2)}`,
+    `Pipe Speed: ${pipeSpeed.toFixed(2)}`,
+    `Bird Y: ${bird.y.toFixed(2)}`,
+    `Bird Velocity: ${bird.velocity.toFixed(2)}`,
+    `Pipes: ${pipes.length}`,
+    `Pipes Passed: ${pipesPassed}`,
+    `Frame Count: ${frameCount}`,
+    `Boosting: ${boosting}`,
+    `Boost Level: ${boostLevel}`,
+    pipes.length > 0 ? `First Pipe X: ${pipes[0].x.toFixed(2)}` : ''
+].forEach(text => {
+    drawTextWithOutline(text, 10, yPos, 'white', 'black', 2, '16px');
+    yPos += 25;
+});
 
     // Restore the canvas state
     ctx.restore();
