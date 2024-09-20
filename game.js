@@ -602,46 +602,85 @@ function displayLeaderboard(leaderboardData) {
         // If scores are tied, sort by oldest timestamp first
         return new Date(a.timestamp) - new Date(b.timestamp);
     });
-
     ctx.fillStyle = 'rgba(0, 0, 0, 0.97)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     const titleText = `${currentLeaderboardMode.toUpperCase()} MODE`;
     drawTextWithOutline(titleText, gameWidth / 2, 15, '#FFD700', 'black', 3, '32px', 'bold', 'center', 'middle');
 
-    let yPos = 70;
+    // Draw arrows for toggling between overall and weekly
+    drawLeaderboardArrows();
+
+    let yPos = 75; //  
     const imgSize = 35;
     const haloSize = imgSize - 6;
     const haloColor = 'rgba(255, 255, 255, 0.2)';
+    const entryHeight = 38;
+    const entryWidth = gameWidth * 0.8;
+    const cornerRadius = 10;
+    const spaceBetweenEntries = 4;
 
     leaderboardData.slice(0, 10).forEach((entry, index) => {
-        const date = new Date(entry.timestamp);
-        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
+    const entryX = (gameWidth - entryWidth) / 2;
+    const entryY = yPos - entryHeight / 2;
 
-        const scoreText = `${entry.playerName}: ${entry.score}`;
-        drawTextWithOutline(scoreText, gameWidth / 2, yPos, 'white', 'black', 2, '22px', 'normal', 'center', 'middle');
+    // Draw rounded rectangle
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    roundRect(ctx, entryX, entryY, entryWidth, entryHeight, cornerRadius);
 
-        drawTextWithOutline(formattedDate, gameWidth / 2, yPos + 20, '#CCCCCC', 'black', 1, '14px', 'normal', 'center', 'middle');
+    const date = new Date(entry.timestamp);
+    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
 
-        const characterKey = entry.character || 'crump1';
-        if (characterImages[characterKey]) {
-            const img = characterImages[characterKey].up;
-            const imgX = gameWidth / 2 - 140;
-            const imgY = yPos - imgSize / 2;
+    // Draw player name centered
+    drawTextWithOutline(entry.playerName, gameWidth / 2, yPos - 7, 'white', 'black', 2, '22px', 'normal', 'center', 'middle');
 
-            ctx.beginPath();
-            ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, haloSize / 2, 0, Math.PI * 2);
-            ctx.fillStyle = haloColor;
-            ctx.fill();
+    // Draw date
+    drawTextWithOutline(formattedDate, gameWidth / 2, yPos + 11, '#CCCCCC', 'black', 1, '14px', 'normal', 'center', 'middle');
 
-            ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-        }
+    // Draw character
+    const characterKey = entry.character || 'crump1';
+    if (characterImages[characterKey]) {
+        const img = characterImages[characterKey].up;
+        const imgX = entryX + 10;
+        const imgY = yPos - imgSize / 2;
 
-        yPos += 42;
+        ctx.beginPath();
+        ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, haloSize / 2, 0, Math.PI * 2);
+        ctx.fillStyle = haloColor;
+        ctx.fill();
+
+        ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
+    }
+
+    // Draw score on the right side with halo
+    const scoreX = entryX + entryWidth - 10 - imgSize / 2;
+    const scoreY = yPos;
+
+    ctx.beginPath();
+    ctx.arc(scoreX, scoreY, haloSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = haloColor;
+    ctx.fill();
+
+    drawTextWithOutline(entry.score.toString(), scoreX, scoreY, 'white', 'black', 2, '22px', 'normal', 'center', 'middle');
+
+    yPos += entryHeight + spaceBetweenEntries;
     });
+}
 
-    // Draw arrows for toggling between overall and weekly
-    drawLeaderboardArrows();
+// Helper function to draw rounded rectangles
+function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.fill();
 }
 
 function drawLeaderboardArrows() {
