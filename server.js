@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -27,19 +28,14 @@ connectToDatabase();
 
 // Replace the existing calculateServerChecksum and verifyChecksum functions with these:
 
-function calculateServerChecksum(score, mode, character) {
-    const data = `${score}|${mode}|${character}`;
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-        const char = data.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash;
+function calculateServerChecksum(score, mode, character, clientChecksum) {
+    const secret = process.env.CHECKSUM_SECRET;
+    const data = `${score}|${mode}|${character}|${clientChecksum}|${secret}`;
+    return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 function verifyChecksum(score, mode, character, clientChecksum) {
-    const serverChecksum = calculateServerChecksum(score, mode, character);
+    const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum);
     console.log('Server checksum:', serverChecksum, 'Client checksum:', clientChecksum);
     return serverChecksum === clientChecksum;
 }
