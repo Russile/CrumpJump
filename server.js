@@ -25,29 +25,60 @@ async function connectToDatabase() {
 
 connectToDatabase();
 
-// Submit score
+// Modified checksum calculation function
+function calculateServerChecksum(score, mode, character, clientChecksum, secret) {
+    const data = `${score}|${mode}|${character}|${clientChecksum}|${secret}`;
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+        const char = data.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
+}
+
+// Modified checksum verification function
+function verifyChecksum(score, mode, character, clientChecksum) {
+    const secret = process.env.CHECKSUM_SECRET;
+    if (!secret) {
+        console.error('CHECKSUM_SECRET is not set in environment variables');
+        return false;
+    }
+    const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum, secret);
+    return serverChecksum === clientChecksum;
+}
+
+// Modified /api/scores endpoint
 app.post('/api/scores', async (req, res) => {
-  try {
-      const { playerName, score, mode, character, configurationId, pipeConfiguration } = req.body;
-      
-      if (score > 1) {
-          await collection.insertOne({ 
-              playerName, 
-              score, 
-              mode, 
-              character, 
-              configurationId,
-              pipeConfiguration, // Store the full configuration
-              timestamp: new Date() 
-          });
-          res.status(201).json({ message: 'Score submitted successfully' });
-      } else {
-          res.status(400).json({ message: 'Score must be greater than 1' });
-      }
-  } catch (error) {
-      console.error('Error submitting score:', error);
-      res.status(500).json({ message: 'Error submitting score' });
-  }
+    try {
+        const { playerName, score, mode, character, clientChecksum, configurationId, pipeConfiguration } = req.body;
+        
+        // Verify the checksum
+        if (!verifyChecksum(score, mode, character, clientChecksum)) {
+            return res.status(400).json({ message: 'Invalid checksum' });
+        }
+
+        // Define maximum possible score based on game logic
+        const MAX_POSSIBLE_SCORE = 147; // Adjust this value based on your game's mechanics
+        
+        if (score > 1 && score <= MAX_POSSIBLE_SCORE) {
+            await collection.insertOne({ 
+                playerName, 
+                score, 
+                mode, 
+                character,
+                configurationId,
+                pipeConfiguration,
+                timestamp: new Date() 
+            });
+            res.status(201).json({ message: 'Score submitted successfully' });
+        } else {
+            res.status(400).json({ message: 'Invalid score' });
+        }
+    } catch (error) {
+        console.error('Error submitting score:', error);
+        res.status(500).json({ message: 'Error submitting score' });
+    }
 });
 
 // Get leaderboard (handles both overall and weekly, and supports old client requests)
