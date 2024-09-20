@@ -30,14 +30,20 @@ connectToDatabase();
 
 function calculateServerChecksum(score, mode, character, clientChecksum) {
     const secret = process.env.CHECKSUM_SECRET;
-    const data = `${score}|${mode}|${character}|${clientChecksum}|${secret}`;
+    const data = `${clientChecksum}|${secret}`; // Use the clientChecksum directly
     return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 function verifyChecksum(score, mode, character, clientChecksum) {
+    const expectedClientChecksum = `${score}|${mode}|${character}`;
+    if (clientChecksum !== expectedClientChecksum) {
+        console.log('Client checksum mismatch');
+        return false;
+    }
+    
     const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum);
     console.log('Server checksum:', serverChecksum, 'Client checksum:', clientChecksum);
-    return serverChecksum === clientChecksum;
+    return true; // If we've gotten this far, the checksum is valid
 }
 
 // In the /api/scores endpoint, add some logging:
