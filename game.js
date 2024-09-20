@@ -87,19 +87,14 @@ function getCharacterDifficulty(character) {
     return (condition.mode === 'Hard' ? 1000 : 0) + condition.score;
 }
 
-const sortedCharacters = getCharacterFolders().sort((a, b) => {
-    return getCharacterDifficulty(a) - getCharacterDifficulty(b);
-});
-
-function switchCharacter(direction) {
-    let availableCharacters = sortedCharacters.filter(char => unlockedCharacters[char]);
-    let currentIndex = availableCharacters.indexOf(currentCharacterIndex);
-    currentIndex = (currentIndex + direction + availableCharacters.length) % availableCharacters.length;
-    currentCharacterIndex = availableCharacters[currentIndex];
-    updateCharacterImages();
+function getSortedCharacters() {
+    return getCharacterFolders().sort((a, b) => {
+        return getCharacterDifficulty(a) - getCharacterDifficulty(b);
+    });
 }
 
 function initializeCharacters() {
+    const sortedCharacters = getSortedCharacters();
     sortedCharacters.forEach((folder) => {
         if (unlockConditions[folder] || folder === ALWAYS_UNLOCKED_CHARACTER) {
             characterImages[folder] = {
@@ -273,8 +268,48 @@ function drawSparkles() {
     }
 }
 
+// Set canvas size to fit the container
+let resizeTimeout;
+let lastWidth = null;  // Initialize to null
+let lastHeight = null; // Initialize to null
+
+function resizeCanvas() {
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    // Resize if it's the first call or if dimensions have changed
+    if (lastWidth === null || lastHeight === null || containerWidth !== lastWidth || containerHeight !== lastHeight) {
+        lastWidth = containerWidth;
+        lastHeight = containerHeight;
+
+        const scale = Math.min(containerWidth / gameWidth, containerHeight / gameHeight);
+        
+        canvas.style.width = `${gameWidth * scale}px`;
+        canvas.style.height = `${gameHeight * scale}px`;
+        
+        // Adjust for high DPI displays
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = gameWidth * scale * dpr;
+        canvas.height = gameHeight * scale * dpr;
+        
+        ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    }
+}
+
+function debouncedResize() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(resizeCanvas, 250);
+}
+
+// Call resizeCanvas initially
+resizeCanvas();
+
+// Add event listener for resize
+window.addEventListener('resize', debouncedResize);
+
 // Make sure to call this when your game initializes
 function initGame() {
+    resizeCanvas(); // Ensure proper sizing when game starts
     loadUnlockedCharacters();
     initializeCharacters();    
     // Ensure the current character is unlocked
@@ -383,14 +418,11 @@ async function showLeaderboard() {
     showingLeaderboard = true;
     const mode = hardModeActive ? 'Hard' : 'Normal';
     currentLeaderboardMode = mode;
-    console.log(`Fetching ${currentLeaderboardType} leaderboard for ${mode} mode`);
     try {
         const leaderboardData = await fetchLeaderboard(mode);
-        console.log('Leaderboard data:', leaderboardData);
         currentLeaderboardData = leaderboardData;
         displayLeaderboard(currentLeaderboardData);
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
         displayLeaderboard([]); // This will trigger the "No leaderboard data available" message
     }
 }
@@ -400,12 +432,24 @@ function sanitizeInput(input) {
     return input.replace(/(<([^>]+)>)/gi, "").trim();
 }
 
+function calculateClientChecksum(score, mode, character) {
+    const data = `${score}|${mode}|${character}`;
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+        const char = data.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
+}
+
 async function submitScore(score, mode) {
     if (score <= 1) {
-        //    if (score <= 1 || debugModeActivated) {
         console.log("Score not submitted: Too low or debug mode was used");
         return;
     }
+
+    const clientChecksum = calculateClientChecksum(score, mode, gameplayCharacter);
 
     try {
         const response = await fetch(`https://crumpjump.onrender.com/api/leaderboard/${mode}`);
@@ -431,7 +475,7 @@ async function submitScore(score, mode) {
             playerName = "noHighScore";
         }
 
-        // Proceed to submit the score with the playerName
+        // Proceed to submit the score with the playerName and clientChecksum
         const submitResponse = await fetch('https://crumpjump.onrender.com/api/scores', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -439,7 +483,8 @@ async function submitScore(score, mode) {
                 playerName, 
                 score, 
                 mode,
-                character: gameplayCharacter
+                character: gameplayCharacter,
+                clientChecksum // Include the client-side checksum
             })
         });
 
@@ -883,9 +928,7 @@ function drawBoostTrail() {
 }
 
 function switchCharacter(direction) {
-    const sortedCharacters = getCharacterFolders().sort((a, b) => {
-        return getCharacterDifficulty(a) - getCharacterDifficulty(b);
-    });
+    const sortedCharacters = getSortedCharacters();
     let currentIndex = sortedCharacters.indexOf(currentCharacterIndex);
     currentIndex = (currentIndex + direction + sortedCharacters.length) % sortedCharacters.length;
     currentCharacterIndex = sortedCharacters[currentIndex];
@@ -1200,17 +1243,6 @@ const HARD_MODE_UNLOCK_SCORE = 25;
 const HARD_MODE_SPEED_MULTIPLIER = 2;
 const HARD_MODE_GAP_REDUCTION = 0.8; // 80% of normal gap size
 
-// Add this variable near the top of your file
-let testHardMode = false;
-
-// Add this event listener after your existing event listeners
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'h' || event.key === 'H') {
-        testHardMode = !testHardMode;
-        hardModeUnlocked = true;
-    }
-});
-
 // Add these constants for button dimensions
 const BUTTON_WIDTH = 200;
 const BUTTON_HEIGHT = 50;
@@ -1459,16 +1491,9 @@ function loadUnlockedCharacters() {
     unlockedCharacters[ALWAYS_UNLOCKED_CHARACTER] = true;
 }
 
-function showUnlockMessage(character) {
-    // Implement a function to show a message when a new character is unlocked
-    console.log(`Unlocked ${character}!`);
-    // You can add code here to display a message on the screen
-}
-
 const FIXED_DELTA_TIME = 1 / 60; // 60 FPS logic update
 let lastUpdateTime = 0;
 
-// Add these variables at the top of your file
 let showingUnlockPopup = false;
 
 // Load the hard mode unlock image
@@ -1479,7 +1504,6 @@ hardModeUnlockedImg.src = 'hardmodeunlocked.png';
 const hardModeActiveImg = new Image();
 hardModeActiveImg.src = 'hardmode.png';
 
-// Add these lines near the top of your file where you load other images
 const normalModeImg = new Image();
 normalModeImg.src = 'normalmode.png';
 
@@ -1491,7 +1515,6 @@ function hideHardModeUnlockedPopup() {
     showingUnlockPopup = false;
 }
 
-// Add this near the top of your file
 let logoClickCount = 0;
 let lastLogoClickTime = 0;
 const LOGO_CLICK_THRESHOLD = 1000; // 1 second
@@ -1937,6 +1960,8 @@ function draw() {
     ctx.drawImage(backgroundImg, Math.floor(backgroundX) + backgroundImg.width - 1, 0);
 
     if (!gameStarted) {
+        resizeCanvas(); // Resize canvas while on the start screen
+
         // Draw start screen
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, gameWidth, gameHeight);
@@ -2421,26 +2446,7 @@ Promise.all([
     console.error("Error loading images:", err);
 });
 
-// Set canvas size to fit the container
-function resizeCanvas() {
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    const scale = Math.min(containerWidth / gameWidth, containerHeight / gameHeight);
-    
-    canvas.style.width = `${gameWidth * scale}px`;
-    canvas.style.height = `${gameHeight * scale}px`;
-    
-    // Adjust for high DPI displays
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = gameWidth * scale * dpr;
-    canvas.height = gameHeight * scale * dpr;
-    
-    ctx.scale(scale * dpr, scale * dpr);
-}
 
-// Call resizeCanvas initially and on window resize 
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
 
 // Add this to your initialization code
 hardModeUnlocked = localStorage.getItem('hardModeUnlocked') === 'true';
