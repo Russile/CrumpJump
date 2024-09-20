@@ -602,7 +602,7 @@ function displayLeaderboard(leaderboardData) {
         // If scores are tied, sort by oldest timestamp first
         return new Date(a.timestamp) - new Date(b.timestamp);
     });
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.97)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.99)';
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     const titleText = `${currentLeaderboardMode.toUpperCase()} MODE`;
