@@ -25,9 +25,10 @@ async function connectToDatabase() {
 
 connectToDatabase();
 
-// Modified checksum calculation function
-function calculateServerChecksum(score, mode, character, clientChecksum, secret) {
-    const data = `${score}|${mode}|${character}|${clientChecksum}|${secret}`;
+// Replace the existing calculateServerChecksum and verifyChecksum functions with these:
+
+function calculateServerChecksum(score, mode, character) {
+    const data = `${score}|${mode}|${character}`;
     let hash = 0;
     for (let i = 0; i < data.length; i++) {
         const char = data.charCodeAt(i);
@@ -37,26 +38,26 @@ function calculateServerChecksum(score, mode, character, clientChecksum, secret)
     return hash;
 }
 
-// Modified checksum verification function
 function verifyChecksum(score, mode, character, clientChecksum) {
-    const secret = process.env.CHECKSUM_SECRET;
-    if (!secret) {
-        console.error('CHECKSUM_SECRET is not set in environment variables');
-        return false;
-    }
-    const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum, secret);
+    const serverChecksum = calculateServerChecksum(score, mode, character);
+    console.log('Server checksum:', serverChecksum, 'Client checksum:', clientChecksum);
     return serverChecksum === clientChecksum;
 }
 
-// Modified /api/scores endpoint
+// In the /api/scores endpoint, add some logging:
 app.post('/api/scores', async (req, res) => {
     try {
         const { playerName, score, mode, character, clientChecksum, configurationId, pipeConfiguration } = req.body;
         
+        console.log('Received score submission:', { score, mode, character, clientChecksum });
+
         // Verify the checksum
         if (!verifyChecksum(score, mode, character, clientChecksum)) {
+            console.log('Checksum verification failed');
             return res.status(400).json({ message: 'Invalid checksum' });
         }
+
+        console.log('Checksum verification passed');
 
         // Define maximum possible score based on game logic
         const MAX_POSSIBLE_SCORE = 147; // Adjust this value based on your game's mechanics
