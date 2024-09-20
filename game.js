@@ -434,13 +434,7 @@ function sanitizeInput(input) {
 
 function calculateClientChecksum(score, mode, character) {
     const data = `${score}|${mode}|${character}`;
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-        const char = data.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash;
+    return data; 
 }
 
 async function submitScore(score, mode) {
