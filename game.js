@@ -230,19 +230,19 @@ function drawSparkles() {
             const size = Math.max(minSize, maxSize - (maxSize - minSize) * ageRatio * speedFactor);
             
             // Color transition from purple to white (faster)
-            const colorTransitionSpeed = 3; // Increase this value for faster color transition
+            const colorTransitionSpeed = 5; // Increase this value for faster color transition
             const colorRatio = Math.min(1, ageRatio * colorTransitionSpeed);
             const r = Math.round(180 + (75 * colorRatio));
             const g = Math.round(100 + (155 * colorRatio));
             const b = Math.round(220 + (35 * colorRatio));
             
             // Opacity calculation (slower fade out)
-            const opacityFadeStart = 0.3; // Start fading at 30% of lifespan
+            const opacityFadeStart = 0.5; // Start fading at 30% of lifespan
             let opacity;
             if (ageRatio < opacityFadeStart) {
-                opacity = 0.5; // Full opacity until fade starts
+                opacity = 0.9; // Full opacity until fade starts
             } else {
-                opacity = 0.5 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
+                opacity = 0.9 * (1 - (ageRatio - opacityFadeStart) / (1 - opacityFadeStart));
             }
 
             // Apply the X offset to the sparkle position
@@ -825,40 +825,18 @@ function updateTrailPositions() {
 }
 
 function drawBoostTrail() {
-    if (trailPositions.length > 1) {
-        // Draw the normal boost trail only when boosting
-        if (boosting) {
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 15;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(trailPositions[0].x, trailPositions[0].y);
-            for (let i = 1; i < trailPositions.length; i++) {
-                ctx.lineTo(trailPositions[i].x, trailPositions[i].y);
-                ctx.globalAlpha = 1 - (i / trailPositions.length); // Fade out the trail
-            }
-            ctx.stroke();
-            ctx.globalAlpha = 1; // Reset global alpha
+    if (trailPositions.length > 1 && boosting) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 15;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(trailPositions[0].x, trailPositions[0].y);
+        for (let i = 1; i < trailPositions.length; i++) {
+            ctx.lineTo(trailPositions[i].x, trailPositions[i].y);
+            ctx.globalAlpha = 1 - (i / trailPositions.length); // Fade out the trail
         }
-
-        // Add sparkles for crump7 always
-        if (currentCharacterIndex === 'crump7') {
-            for (let i = 0; i < trailPositions.length; i++) {
-                const sparkleCount = Math.floor(Math.random() * 3) + 1; // 1 to 3 sparkles per position
-                for (let j = 0; j < sparkleCount; j++) {
-                    const offsetX = (Math.random() - 0.5) * 20 - 20; // Shift sparkles to the left
-                    const offsetY = (Math.random() - 0.5) * 20;
-                    const size = (Math.sin(sparkleTime * 10 + i * 0.5) * 2 + 3) * (1 - i / trailPositions.length);
-                    const rotation = sparkleTime * 2 + i * 0.1;
-                    drawSparkles(
-                        trailPositions[i].x + offsetX,
-                        trailPositions[i].y + offsetY,
-                        size,
-                        rotation
-                    );
-                }
-            }
-        }
+        ctx.stroke();
+        ctx.globalAlpha = 1; // Reset global alpha
     }
 }
 
