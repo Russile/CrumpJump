@@ -28,33 +28,63 @@ connectToDatabase();
 
 // Replace the existing calculateServerChecksum and verifyChecksum functions with these:
 
-function calculateServerChecksum(score, mode, character, clientChecksum) {
+function calculateServerChecksum(score, mode, character, clientChecksum, pipesPassed, timestamp) {
     const secret = process.env.CHECKSUM_SECRET;
-    const data = `${clientChecksum}|${secret}`; // Use the clientChecksum directly
+    const data = `${clientChecksum}|${score}|${mode}|${character}|${pipesPassed}|${timestamp}|${secret}`;
     return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-function verifyChecksum(score, mode, character, clientChecksum) {
-    const expectedClientChecksum = `${score}|${mode}|${character}`;
+function verifyChecksum(score, mode, character, clientChecksum, pipesPassed, timestamp) {
+    // Recreate the client checksum
+    const expectedClientChecksum = calculateClientChecksum(score, mode, character, pipesPassed);
+    
+    // Verify that the received client checksum matches the expected one
     if (clientChecksum !== expectedClientChecksum) {
         console.log('Client checksum mismatch');
         return false;
     }
     
-    const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum);
+    // Calculate and verify the server checksum
+    const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum, pipesPassed, timestamp);
     console.log('Server checksum:', serverChecksum, 'Client checksum:', clientChecksum);
-    return true; // If we've gotten this far, the checksum is valid
+    
+    // Verify timestamp is within an acceptable range (e.g., within the last 5 minutes)
+    const currentTime = Date.now();
+    const timeDifference = currentTime - timestamp;
+    if (timeDifference < 0 || timeDifference > 5 * 60 * 1000) {
+        console.log('Timestamp out of acceptable range');
+        return false;
+    }
+    
+    return true;
+}
+
+function calculateClientChecksum(score, mode, character, pipesPassed) {
+    const data = `${score}|${mode}|${character}|${pipesPassed}`;
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+        const char = data.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
 }
 
 // In the /api/scores endpoint, add some logging:
 app.post('/api/scores', async (req, res) => {
     try {
-        const { playerName, score, mode, character, clientChecksum, configurationId, pipeConfiguration } = req.body;
+        const { playerName, score, mode, character, clientChecksum, pipesPassed, timestamp } = req.body;
         
-        console.log('Received score submission:', { score, mode, character, clientChecksum });
+        console.log('Received score submission:', { playerName, score, mode, character, clientChecksum, pipesPassed, timestamp });
+
+        // Verify score matches pipesPassed
+        if (score !== pipesPassed) {
+            console.log('Score does not match pipes passed');
+            return res.status(400).json({ message: 'Invalid score submission' });
+        }
 
         // Verify the checksum
-        if (!verifyChecksum(score, mode, character, clientChecksum)) {
+        if (!verifyChecksum(score, mode, character, clientChecksum, pipesPassed, timestamp)) {
             console.log('Checksum verification failed');
             return res.status(400).json({ message: 'Invalid checksum' });
         }
@@ -70,9 +100,8 @@ app.post('/api/scores', async (req, res) => {
                 score, 
                 mode, 
                 character,
-                configurationId,
-                pipeConfiguration,
-                timestamp: new Date() 
+                pipesPassed,
+                timestamp: new Date(timestamp) 
             });
             res.status(201).json({ message: 'Score submitted successfully' });
         } else {
