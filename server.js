@@ -115,105 +115,35 @@ app.post('/api/scores', async (req, res) => {
 
 // Get leaderboard (handles both overall and weekly, and supports old client requests)
 app.get('/api/leaderboard/:mode/:type?', async (req, res) => {
-    try {
-        const { mode, type } = req.params;
-        let query = { mode };
-        let sort = { score: -1 };
+  try {
+      const { mode, type } = req.params;
+      let query = { mode };
+      let sort = { score: -1 };
 
-        // If type is not provided (old client request), default to overall
-        const leaderboardType = type || 'overall';
+      // If type is not provided (old client request), default to overall
+      const leaderboardType = type || 'overall';
 
-        if (leaderboardType === 'weekly') {
-            // Calculate the start of the current week (Sunday at 4:00 AM UTC)
-            const now = new Date();
-            const startOfWeek = new Date(Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate() - now.getUTCDay(),
-                4, 0, 0, 0
-            ));
+      if (leaderboardType === 'weekly') {
+          // Calculate the start of the current week (Sunday)
+          const startOfWeek = new Date();
+          startOfWeek.setHours(0, 0, 0, 0);
+          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
 
-            // If it's Sunday and past 4 AM UTC, move back 7 days
-            if (startOfWeek > now) {
-                startOfWeek.setUTCDate(startOfWeek.getUTCDate() - 7);
-            }
-
-            query.timestamp = { $gte: startOfWeek };
-
-            console.log('Weekly leaderboard start time:', startOfWeek);
-        }
-
-        console.log('Leaderboard query:', JSON.stringify(query));
-
-        const leaderboard = await collection.find(query)
-            .sort(sort)
-            .limit(10)
-            .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
-            .toArray();
-
-        console.log(`${leaderboardType.charAt(0).toUpperCase() + leaderboardType.slice(1)} leaderboard for ${mode} mode:`, leaderboard);
-
-        res.json(leaderboard);
-    } catch (error) {
-        console.error('Error fetching leaderboard:', error);
-        res.status(500).json({ message: 'Error fetching leaderboard' });
-    }
-});
-
-app.get('/api/debug-weekly-leaderboard/:mode', async (req, res) => {
-    try {
-      const { mode } = req.params;
-      
-      if (mode !== 'Normal' && mode !== 'Hard') {
-        return res.status(400).json({ message: 'Invalid mode. Use "Normal" or "Hard".' });
+          query.timestamp = { $gte: startOfWeek };
       }
-  
-      // Calculate the start of the current week (Sunday at 4:00 AM UTC)
-      const now = new Date();
-      const startOfWeek = new Date(Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate() - now.getUTCDay(),
-        4, 0, 0, 0
-      ));
-  
-      // If it's Sunday and past 4 AM UTC, move back 7 days
-      if (startOfWeek > now) {
-        startOfWeek.setUTCDate(startOfWeek.getUTCDate() - 7);
-      }
-  
-      console.log('Start of week:', startOfWeek);
-  
-      const query = { 
-        mode: mode,
-        timestamp: { $gte: startOfWeek }
-      };
-  
-      console.log('Query:', JSON.stringify(query));
-  
-      const allScores = await collection.find({ mode: mode }).toArray();
-      console.log(`All ${mode} scores:`, allScores);
-  
+
       const leaderboard = await collection.find(query)
-        .sort({ score: -1 })
-        .limit(10)
-        .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
-        .toArray();
-  
-      console.log(`Debug ${mode} weekly leaderboard:`, leaderboard);
-  
-      res.json({ 
-        message: `Debug weekly leaderboard for ${mode} mode`,
-        startOfWeek: startOfWeek,
-        query: query,
-        leaderboard: leaderboard,
-        allScores: allScores
-      });
-    } catch (error) {
-      console.error('Error debugging weekly leaderboard:', error);
-      res.status(500).json({ message: 'Error debugging weekly leaderboard' });
-    }
-  });
+          .sort(sort)
+          .limit(10)
+          .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
+          .toArray();
+
+      res.json(leaderboard);
+  } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      res.status(500).json({ message: 'Error fetching leaderboard' });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
