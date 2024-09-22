@@ -145,5 +145,49 @@ app.get('/api/leaderboard/:mode/:type?', async (req, res) => {
     }
   });
 
+app.get('/api/repopulate-weekly-leaderboard/:mode', async (req, res) => {
+  try {
+    const { mode } = req.params;
+    
+    if (mode !== 'Normal' && mode !== 'Hard') {
+      return res.status(400).json({ message: 'Invalid mode. Use "Normal" or "Hard".' });
+    }
+
+    // Calculate the start of the current week (Sunday at 4:00 AM server time)
+    const startOfWeek = new Date();
+    startOfWeek.setHours(4, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+    console.log('Start of week:', startOfWeek);
+
+    const query = { 
+      mode: mode,
+      timestamp: { $gte: startOfWeek }
+    };
+
+    console.log('Query:', JSON.stringify(query));
+
+    const allScores = await collection.find({ mode: mode }).toArray();
+    console.log(`All ${mode} scores:`, allScores);
+
+    const leaderboard = await collection.find(query)
+      .sort({ score: -1 })
+      .limit(10)
+      .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
+      .toArray();
+
+    console.log(`Repopulated ${mode} weekly leaderboard:`, leaderboard);
+
+    res.json({ 
+      message: `Weekly leaderboard for ${mode} mode repopulated`,
+      leaderboard: leaderboard,
+      allScores: allScores
+    });
+  } catch (error) {
+    console.error('Error repopulating weekly leaderboard:', error);
+    res.status(500).json({ message: 'Error repopulating weekly leaderboard' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
