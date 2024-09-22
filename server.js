@@ -124,13 +124,17 @@ app.get('/api/leaderboard/:mode/:type?', async (req, res) => {
       const leaderboardType = type || 'overall';
 
       if (leaderboardType === 'weekly') {
-          // Calculate the start of the current week (Sunday)
-          const startOfWeek = new Date();
-          startOfWeek.setHours(0, 0, 0, 0);
-          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        // Calculate the start of the current week (Sunday at 00:00:00 ET, which is 04:00:00 server time)
+        const now = new Date();
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 4, 0, 0, 0);
 
-          query.timestamp = { $gte: startOfWeek };
-      }
+        // If it's Sunday and before 4 AM server time, we need to use last week's start time
+        if (now.getDay() === 0 && now.getHours() < 4) {
+            startOfWeek.setDate(startOfWeek.getDate() - 7);
+        }
+
+        query.timestamp = { $gte: startOfWeek };
+    }
 
       const leaderboard = await collection.find(query)
           .sort(sort)
