@@ -115,39 +115,35 @@ app.post('/api/scores', async (req, res) => {
 
 // Get leaderboard (handles both overall and weekly, and supports old client requests)
 app.get('/api/leaderboard/:mode/:type?', async (req, res) => {
-  try {
-      const { mode, type } = req.params;
-      let query = { mode };
-      let sort = { score: -1 };
-
-      // If type is not provided (old client request), default to overall
-      const leaderboardType = type || 'overall';
-
-      if (leaderboardType === 'weekly') {
-        // Calculate the start of the current week (Sunday at 00:00:00 ET, which is 04:00:00 server time)
-        const now = new Date();
-        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 4, 0, 0, 0);
-
-        // If it's Sunday and before 4 AM server time, we need to use last week's start time
-        if (now.getDay() === 0 && now.getHours() < 4) {
-            startOfWeek.setDate(startOfWeek.getDate() - 7);
+    try {
+        const { mode, type } = req.params;
+        let query = { mode };
+        let sort = { score: -1 };
+  
+        // If type is not provided (old client request), default to overall
+        const leaderboardType = type || 'overall';
+  
+        if (leaderboardType === 'weekly') {
+            // Calculate the start of the current week (Sunday at 00:00:00 ET)
+            const startOfWeek = new Date();
+            startOfWeek.setUTCHours(4, 0, 0, 0); // 00:00:00 ET is 04:00:00 UTC
+            startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+  
+            query.timestamp = { $gte: startOfWeek };
         }
-
-        query.timestamp = { $gte: startOfWeek };
+  
+        const leaderboard = await collection.find(query)
+            .sort(sort)
+            .limit(10)
+            .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
+            .toArray();
+  
+        res.json(leaderboard);
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        res.status(500).json({ message: 'Error fetching leaderboard' });
     }
-
-      const leaderboard = await collection.find(query)
-          .sort(sort)
-          .limit(10)
-          .project({ playerName: 1, score: 1, character: 1, timestamp: 1, _id: 0 })
-          .toArray();
-
-      res.json(leaderboard);
-  } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-      res.status(500).json({ message: 'Error fetching leaderboard' });
-  }
-});
+  });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
