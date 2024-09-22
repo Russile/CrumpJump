@@ -124,10 +124,10 @@ app.get('/api/leaderboard/:mode/:type?', async (req, res) => {
         const leaderboardType = type || 'overall';
   
         if (leaderboardType === 'weekly') {
-            // Calculate the start of the current week (Sunday at 00:00:00 ET)
+            // Calculate the start of the current week (Sunday)
             const startOfWeek = new Date();
-            startOfWeek.setUTCHours(4, 0, 0, 0); // 00:00:00 ET is 04:00:00 UTC
-            startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+            startOfWeek.setHours(4, 0, 0, 0);
+            startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
   
             query.timestamp = { $gte: startOfWeek };
         }
