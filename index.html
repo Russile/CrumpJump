@@ -109,6 +109,45 @@
         background-color: #0056b3; /* Darker blue on hover */
     }
 </style>
+
+    <!-- Version check script -->
+    <script>
+        // Function to check the latest version from version.json
+        function checkForNewVersion() {
+            fetch('version.json', { cache: 'no-store' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const currentVersion = localStorage.getItem('gameVersion');
+                    const latestVersion = data.version;
+
+                    if (currentVersion !== latestVersion) {
+                        localStorage.setItem('gameVersion', latestVersion);
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    // Silently handle errors
+                });
+        }
+
+        // Run checkForNewVersion when the page gains focus
+        window.addEventListener('focus', checkForNewVersion);
+
+        // Initial check when the page loads
+        document.addEventListener('DOMContentLoaded', checkForNewVersion);
+
+        // Fallback in case DOMContentLoaded doesn't fire
+        window.onload = () => {
+            if (!localStorage.getItem('gameVersion')) {
+                checkForNewVersion();
+            }
+        };
+    </script>
 </head>
 <body>
     <div id="gameContainer">
@@ -125,8 +164,6 @@
         </div>
     </div>
     
-    <script src="game.js?v=0.2.2"></script> 
+    <script src="game.js"></script> 
 </body>
 </html>
-
-
