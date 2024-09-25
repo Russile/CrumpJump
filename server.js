@@ -48,11 +48,14 @@ function verifyChecksum(score, mode, character, clientChecksum, pipesPassed, tim
     const serverChecksum = calculateServerChecksum(score, mode, character, clientChecksum, pipesPassed, timestamp);
     console.log('Server checksum:', serverChecksum, 'Client checksum:', clientChecksum);
     
-    // Verify timestamp is within an acceptable range (e.g., within the last 5 minutes)
+    // Verify timestamp is within an acceptable range (e.g., within the last 15 minutes)
     const currentTime = Date.now();
     const timeDifference = currentTime - timestamp;
-    if (timeDifference < 0 || timeDifference > 5 * 60 * 1000) {
-        console.log('Timestamp out of acceptable range');
+    console.log('Time difference:', timeDifference, 'ms');
+    
+    // Increase the acceptable time range to 15 minutes
+    if (timeDifference < -15 * 60 * 1000 || timeDifference > 15 * 60 * 1000) {
+        console.log('Timestamp out of acceptable range. Current time:', new Date(currentTime), 'Submission time:', new Date(timestamp));
         return false;
     }
     
