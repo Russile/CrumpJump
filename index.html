@@ -113,48 +113,44 @@
     <!-- Version check script -->
     <script>
         function loadGameScript(version) {
+            const existingScript = document.getElementById('gameScript');
+            if (existingScript) {
+                existingScript.remove();
+            }
+
             const script = document.createElement('script');
-            script.src = `game.js?v=${version}`; // Append the version number as query string
-            document.body.appendChild(script); // Add script tag to the document
+            script.id = 'gameScript';
+            script.src = `game.js?v=${version}`;
+            document.body.appendChild(script);
         }
 
         function checkForNewVersion() {
             fetch('version.json', { cache: 'no-store' })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     const currentVersion = localStorage.getItem('gameVersion');
                     const latestVersion = data.version;
 
                     if (currentVersion !== latestVersion) {
                         localStorage.setItem('gameVersion', latestVersion);
-                        location.reload(); // Reload to apply new version
-                    } else {
-                        loadGameScript(currentVersion); // Load game.js if version hasn't changed
+                        loadGameScript(latestVersion);
+                    } else if (!document.getElementById('gameScript')) {
+                        loadGameScript(currentVersion);
                     }
                 })
                 .catch(error => {
                     console.error('Error checking version:', error);
-                    loadGameScript('fallback'); // Load fallback version if there's an issue
+                    if (!document.getElementById('gameScript')) {
+                        loadGameScript('fallback');
+                    }
                 });
         }
 
-        // Run checkForNewVersion when the page gains focus
-        window.addEventListener('focus', checkForNewVersion);
-
-        // Initial check when the page loads
+        // Run checkForNewVersion when the page loads
         document.addEventListener('DOMContentLoaded', checkForNewVersion);
 
-        // Fallback in case DOMContentLoaded doesn't fire
-        window.onload = () => {
-            if (!localStorage.getItem('gameVersion')) {
-                checkForNewVersion();
-            }
-        };
+        // Run checkForNewVersion when the page gains focus
+        window.addEventListener('focus', checkForNewVersion);
     </script>
 </head>
 <body>
@@ -162,7 +158,6 @@
         <canvas id="gameCanvas" width="320" height="480"></canvas>
     </div>
     
-
     <div id="nameModal" class="modal">
         <div class="modal-content">
             <div class="modal-title">Choose Username</div>
